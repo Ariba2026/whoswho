@@ -272,6 +272,19 @@ class DirectoryScreen extends StatelessWidget {
           ),
 
           _categoryCard(
+            icon: Icons.home_repair_service_outlined,
+            title: 'Services',
+            subtitle: 'Find people offering services',
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Services selected'),
+                ),
+              );
+            },
+          ),
+
+          _categoryCard(
             icon: Icons.business_outlined,
             title: 'Businesses',
             subtitle: 'Discover businesses and organizations',
@@ -279,6 +292,19 @@ class DirectoryScreen extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Businesses selected'),
+                ),
+              );
+            },
+          ),
+
+          _categoryCard(
+            icon: Icons.public,
+            title: 'Remote & Online',
+            subtitle: 'Find people and services available remotely',
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Remote & Online selected'),
                 ),
               );
             },
@@ -375,7 +401,7 @@ const List<Professional> sampleProfessionals = [
     city: 'Siaya',
     availability: 'Remote',
     rating: 4.8,
-    reviewCount: 0,
+    reviewCount: 23,
   ),
 
   Professional(
@@ -398,7 +424,7 @@ const List<Professional> sampleProfessionals = [
     city: 'Nairobi',
     availability: 'On-site',
     rating: 4.6,
-    reviewCount: 0,
+    reviewCount: 17,
   ),
 
   Professional(
@@ -421,7 +447,7 @@ const List<Professional> sampleProfessionals = [
     city: 'Kampala',
     availability: 'Remote',
     rating: 4.9,
-    reviewCount: 0,
+    reviewCount: 31,
   ),
 ];
 
@@ -511,34 +537,24 @@ class _ProfessionalsDirectoryScreenState
 
               const SizedBox(height: 8),
 
-              if (professional.reviewCount == 0)
-                const Text(
-                  'No reviews yet',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.black54,
-                    fontStyle: FontStyle.italic,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.star,
+                    size: 22,
                   ),
-                )
-              else
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.star,
-                      size: 22,
+                  const SizedBox(width: 4),
+                  Text(
+                    '${professional.rating.toStringAsFixed(1)} '
+                        '(${professional.reviewCount} reviews)',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${professional.rating.toStringAsFixed(1)} '
-                          '(${professional.reviewCount} reviews)',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
 
               const SizedBox(height: 8),
 
@@ -816,50 +832,6 @@ class _ProfessionalProfileScreenState
     );
   }
 
-  void _contactProfessional() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.phone),
-                title: const Text('Call Professional'),
-                onTap: () {
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.message),
-                title: const Text('Send Message'),
-                onTap: () {
-                  Navigator.pop(context);
-
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => MessageProfessionalScreen(
-                        professional: widget.professional,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.email),
-                title: const Text('Send Email'),
-                onTap: () {
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   void _reportProfessional() {
     showDialog(
       context: context,
@@ -953,24 +925,6 @@ class _ProfessionalProfileScreenState
                     ? 'Favourited'
                     : 'Add to Favourites',
                 style: const TextStyle(
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          // Contact button
-          SizedBox(
-            height: 50,
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _contactProfessional,
-              icon: const Icon(Icons.contact_phone),
-              label: const Text(
-                'Contact Professional',
-                style: TextStyle(
                   fontSize: 16,
                 ),
               ),
@@ -1123,7 +1077,6 @@ class _ProfessionalProfileScreenState
           ),
 
           const SizedBox(height: 28),
-
           const Text(
             'Reviews',
             style: TextStyle(
@@ -1134,109 +1087,37 @@ class _ProfessionalProfileScreenState
 
           const SizedBox(height: 8),
 
-          const Text(
+          Text(
             'No written reviews yet.',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 16,
             ),
           ),
 
           const SizedBox(height: 28),
-        ],
-      ),
-    );
-  }
-}
-
-
-class MessageProfessionalScreen extends StatefulWidget {
-  final Professional professional;
-
-  const MessageProfessionalScreen({
-    super.key,
-    required this.professional,
-  });
-
-  @override
-  State<MessageProfessionalScreen> createState() =>
-      _MessageProfessionalScreenState();
-}
-
-class _MessageProfessionalScreenState
-    extends State<MessageProfessionalScreen> {
-  final TextEditingController _messageController =
-  TextEditingController();
-
-  void _sendMessage() {
-    final message = _messageController.text.trim();
-
-    if (message.isEmpty) {
-      return;
-    }
-
-    _messageController.clear();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Message sent.'),
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Message ${widget.professional.name}'),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Center(
-              child: Text(
-                'Start a conversation with ${widget.professional.name}.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                ),
+          SizedBox(
+            height: 50,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Contact feature will be added later.',
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.message_outlined),
+              label: const Text(
+                'Contact Professional',
+                style: TextStyle(fontSize: 16),
               ),
             ),
           ),
-
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: const InputDecoration(
-                      hintText: 'Write a message...',
-                      border: OutlineInputBorder(),
-                    ),
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _sendMessage(),
-                  ),
-                ),
-
-                const SizedBox(width: 8),
-
-                IconButton(
-                  onPressed: _sendMessage,
-                  icon: const Icon(Icons.send),
-                  tooltip: 'Send',
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
   }
 }
+
+
