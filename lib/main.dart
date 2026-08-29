@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() {
   runApp(const WhosWhoApp());
@@ -23,8 +24,15 @@ class WhosWhoApp extends StatelessWidget {
   }
 }
 
-class WelcomePage extends StatelessWidget {
+class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
+
+  @override
+  State<WelcomePage> createState() => _WelcomePageState();
+}
+
+class _WelcomePageState extends State<WelcomePage> {
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -82,9 +90,19 @@ class WelcomePage extends StatelessWidget {
 
               // Search box
               TextField(
+                controller: _searchController,
                 decoration: InputDecoration(
                   hintText: 'Search people or services',
                   prefixIcon: const Icon(Icons.search),
+                  suffixIcon: IconButton(
+                    icon: const Icon(
+                      Icons.clear,
+                      size: 24,
+                    ),
+                    onPressed: () {
+                      _searchController.clear();
+                    },
+                  ),
                   filled: true,
                   fillColor: Colors.grey.shade100,
                   border: OutlineInputBorder(
@@ -328,6 +346,7 @@ class DirectoryScreen extends StatelessWidget {
 
 class Professional {
   final String id;
+  final String email;
   final String name;
   final String profession;
   final List<String> skills;
@@ -336,11 +355,13 @@ class Professional {
   final String region;
   final String city;
   final String availability;
+  final String phone;
   final double rating;
   final int reviewCount;
 
   const Professional({
     required this.id,
+    required this.email,
     required this.name,
     required this.profession,
     required this.skills,
@@ -349,6 +370,7 @@ class Professional {
     required this.region,
     required this.city,
     required this.availability,
+    required this.phone,
     required this.rating,
     required this.reviewCount,
   });
@@ -357,6 +379,7 @@ class Professional {
 const List<Professional> sampleProfessionals = [
   Professional(
     id: 'john_otieno',
+    email: 'john@example.com',
     name: 'John Otieno',
     profession: 'Writer',
     skills: [
@@ -374,12 +397,14 @@ const List<Professional> sampleProfessionals = [
     region: 'Siaya',
     city: 'Siaya',
     availability: 'Remote',
+    phone: '+254700000001',
     rating: 4.8,
     reviewCount: 0,
   ),
 
   Professional(
     id: 'mary_achieng',
+    email: 'mary@example.com',
     name: 'Mary Achieng',
     profession: 'Graphic Designer',
     skills: [
@@ -397,12 +422,14 @@ const List<Professional> sampleProfessionals = [
     region: 'Nairobi',
     city: 'Nairobi',
     availability: 'On-site',
+    phone: '+254700000002',
     rating: 4.6,
     reviewCount: 0,
   ),
 
   Professional(
     id: 'david_okello',
+    email: 'david@example.com',
     name: 'David Okello',
     profession: 'Web Developer',
     skills: [
@@ -420,6 +447,7 @@ const List<Professional> sampleProfessionals = [
     region: 'Kampala',
     city: 'Kampala',
     availability: 'Remote',
+    phone: '+256700000003',
     rating: 4.9,
     reviewCount: 0,
   ),
@@ -657,9 +685,18 @@ class _ProfessionalsDirectoryScreenState
           // Professional / Service Search
           TextField(
             controller: searchController,
+            onChanged: (value) {
+              _searchProfessionals();
+            },
             decoration: InputDecoration(
               hintText: 'Search professionals, skills or services',
               prefixIcon: const Icon(Icons.search),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.clear),
+                onPressed: () {
+                  searchController.clear();
+                },
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -684,6 +721,12 @@ class _ProfessionalsDirectoryScreenState
             decoration: InputDecoration(
               hintText: 'Search country, county, city or town',
               prefixIcon: const Icon(Icons.location_on_outlined),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.clear),
+                onPressed: () {
+                  locationController.clear();
+                },
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -826,8 +869,27 @@ class _ProfessionalProfileScreenState
               ListTile(
                 leading: const Icon(Icons.phone),
                 title: const Text('Call Professional'),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context);
+
+                  final Uri phoneUri = Uri(
+                    scheme: 'tel',
+                    path: widget.professional.phone,
+                  );
+
+                  try {
+                    await launchUrl(phoneUri);
+                  } catch (e) {
+                    if (!context.mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Unable to open the phone dialer.',
+                        ),
+                      ),
+                    );
+                  }
                 },
               ),
               ListTile(
@@ -846,13 +908,32 @@ class _ProfessionalProfileScreenState
                   );
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.email),
-                title: const Text('Send Email'),
-                onTap: () {
-                  Navigator.pop(context);
-                },
-              ),
+ListTile(
+leading: const Icon(Icons.email),
+title: const Text('Send Email'),
+onTap: () async {
+Navigator.pop(context);
+
+final Uri emailUri = Uri(
+scheme: 'mailto',
+path: widget.professional.email,
+);
+
+try {
+await launchUrl(emailUri);
+} catch (e) {
+if (!context.mounted) return;
+
+ScaffoldMessenger.of(context).showSnackBar(
+const SnackBar(
+content: Text(
+'Unable to open the email app.',
+),
+),
+);
+}
+},
+),
             ],
           ),
         );
@@ -976,8 +1057,10 @@ class _ProfessionalProfileScreenState
               ),
             ),
           ),
+          // Send Email button
 
           const SizedBox(height: 12),
+
 
           // Report button
           SizedBox(
