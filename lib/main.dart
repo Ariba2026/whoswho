@@ -294,9 +294,10 @@ class DirectoryScreen extends StatelessWidget {
             title: 'Businesses',
             subtitle: 'Discover businesses and organizations',
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Businesses selected'),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const BusinessesDirectoryScreen(),
                 ),
               );
             },
@@ -375,7 +376,35 @@ class Professional {
     required this.reviewCount,
   });
 }
+class Business {
+  final String id;
+  final String email;
+  final String name;
+  final String category;
+  final List<String> services;
+  final String country;
+  final String region;
+  final String city;
+  final String availability;
+  final String phone;
+  final double rating;
+  final int reviewCount;
 
+  const Business({
+    required this.id,
+    required this.email,
+    required this.name,
+    required this.category,
+    required this.services,
+    required this.country,
+    required this.region,
+    required this.city,
+    required this.availability,
+    required this.phone,
+    required this.rating,
+    required this.reviewCount,
+  });
+}
 const List<Professional> sampleProfessionals = [
   Professional(
     id: 'john_otieno',
@@ -449,6 +478,69 @@ const List<Professional> sampleProfessionals = [
     availability: 'Remote',
     phone: '+256700000003',
     rating: 4.9,
+    reviewCount: 0,
+  ),
+];
+
+const List<Business> sampleBusinesses = [
+  Business(
+    id: 'ariba_productions',
+    email: 'info@aribaproductions.co.ke',
+    name: 'Ariba Productions',
+    category: 'Media & Film',
+    services: [
+      'Video Coverage',
+      'Video Editing',
+      'Film Production',
+      'Custom Music',
+      'AI Image Design',
+    ],
+    country: 'Kenya',
+    region: 'Migori',
+    city: 'Migori',
+    availability: 'On-site',
+    phone: '+254700000010',
+    rating: 4.8,
+    reviewCount: 0,
+  ),
+
+  Business(
+    id: 'green_valley_hotel',
+    email: 'info@greenvalley.example',
+    name: 'Green Valley Hotel',
+    category: 'Hospitality',
+    services: [
+      'Accommodation',
+      'Restaurant',
+      'Conference Facilities',
+      'Events',
+    ],
+    country: 'Kenya',
+    region: 'Kisumu',
+    city: 'Kisumu',
+    availability: 'On-site',
+    phone: '+254700000011',
+    rating: 4.5,
+    reviewCount: 0,
+  ),
+
+  Business(
+    id: 'tech_world_solutions',
+    email: 'info@techworld.example',
+    name: 'Tech World Solutions',
+    category: 'Technology',
+    services: [
+      'Web Development',
+      'Mobile App Development',
+      'IT Support',
+      'Software Services',
+    ],
+    country: 'Uganda',
+    region: 'Central',
+    city: 'Kampala',
+    availability: 'Remote',
+    phone: '+256700000012',
+    rating: 4.7,
     reviewCount: 0,
   ),
 ];
@@ -821,6 +913,559 @@ class _ProfessionalsDirectoryScreenState
                     (professional) => _buildProfessionalCard(professional),
               ),
         ],
+      ),
+    );
+  }
+}
+
+class BusinessesDirectoryScreen extends StatefulWidget {
+  const BusinessesDirectoryScreen({super.key});
+
+  @override
+  State<BusinessesDirectoryScreen> createState() =>
+      _BusinessesDirectoryScreenState();
+}
+
+class _BusinessesDirectoryScreenState
+    extends State<BusinessesDirectoryScreen> {
+  final TextEditingController searchController = TextEditingController();
+  final TextEditingController locationController = TextEditingController();
+
+  List<Business> searchResults = [];
+
+  bool hasSearched = false;
+
+  void _searchBusinesses() {
+    final searchText = searchController.text.trim().toLowerCase();
+    final locationText = locationController.text.trim().toLowerCase();
+
+    final results = sampleBusinesses.where((business) {
+      final businessMatches = searchText.isEmpty ||
+          business.name.toLowerCase().contains(searchText) ||
+          business.category.toLowerCase().contains(searchText) ||
+          business.services.any(
+                (service) => service.toLowerCase().contains(searchText),
+          );
+
+      final locationMatches = locationText.isEmpty ||
+          business.country.toLowerCase().contains(locationText) ||
+          business.region.toLowerCase().contains(locationText) ||
+          business.city.toLowerCase().contains(locationText);
+
+      return businessMatches && locationMatches;
+    }).toList();
+
+    setState(() {
+      searchResults = results;
+      hasSearched = true;
+    });
+  }
+
+  Widget _buildBusinessCard(Business business) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  BusinessProfileScreen(
+                    business: business,
+                  ),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                business.name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 4),
+
+              Text(
+                business.category,
+                style: const TextStyle(
+                  fontSize: 16,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              if (business.reviewCount == 0)
+                const Text(
+                  'No reviews yet',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.black54,
+                    fontStyle: FontStyle.italic,
+                  ),
+                )
+              else
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.star,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${business.rating.toStringAsFixed(1)} '
+                          '(${business.reviewCount} reviews)',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+
+              const SizedBox(height: 8),
+
+              Row(
+                children: [
+                  const Icon(
+                    Icons.location_on_outlined,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      '${business.country} · '
+                          '${business.region} · '
+                          '${business.city}',
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
+              Text(
+                'Services: ${business.services.join(', ')}',
+                style: const TextStyle(
+                  fontSize: 14,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              Row(
+                children: [
+                  Icon(
+                    business.availability == 'Remote'
+                        ? Icons.public
+                        : Icons.location_on,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Availability: ${business.availability}',
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    'View Business',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  Icon(
+                    Icons.arrow_forward,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    locationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Businesses'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: searchController,
+              decoration: const InputDecoration(
+                labelText: 'Search businesses, category or services',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (_) => _searchBusinesses(),
+            ),
+
+            const SizedBox(height: 12),
+
+            TextField(
+              controller: locationController,
+              decoration: const InputDecoration(
+                labelText: 'Country, region or city',
+                prefixIcon: Icon(Icons.location_on_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (_) => _searchBusinesses(),
+            ),
+
+            const SizedBox(height: 12),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _searchBusinesses,
+                icon: const Icon(Icons.search),
+                label: const Text('Search Businesses'),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            Expanded(
+              child: hasSearched
+                  ? searchResults.isEmpty
+                  ? const Center(
+                child: Text(
+                  'No businesses found.',
+                  style: TextStyle(fontSize: 16),
+                ),
+              )
+                  : ListView.builder(
+                itemCount: searchResults.length,
+                itemBuilder: (context, index) {
+                  return _buildBusinessCard(
+                    searchResults[index],
+                  );
+                },
+              )
+                  : const Center(
+                child: Text(
+                  'Search for a business, category or service.',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class BusinessProfileScreen extends StatefulWidget {
+  final Business business;
+
+  const BusinessProfileScreen({
+    super.key,
+    required this.business,
+  });
+
+  @override
+  State<BusinessProfileScreen> createState() =>
+      _BusinessProfileScreenState();
+}
+
+class _BusinessProfileScreenState
+    extends State<BusinessProfileScreen> {
+  bool isFavourite = false;
+
+  void _toggleFavourite() {
+    setState(() {
+      isFavourite = !isFavourite;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          isFavourite
+              ? 'Business added to favourites.'
+              : 'Business removed from favourites.',
+        ),
+      ),
+    );
+  }
+
+  void _contactBusiness() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.phone),
+                title: const Text('Call Business'),
+                onTap: () async {
+                  Navigator.pop(context);
+
+                  final Uri phoneUri = Uri(
+                    scheme: 'tel',
+                    path: widget.business.phone,
+                  );
+
+                  try {
+                    await launchUrl(phoneUri);
+                  } catch (e) {
+                    if (!context.mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Unable to open the phone dialer.',
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
+
+              ListTile(
+                leading: const Icon(Icons.email),
+                title: const Text('Email Business'),
+                onTap: () async {
+                  Navigator.pop(context);
+
+                  final Uri emailUri = Uri(
+                    scheme: 'mailto',
+                    path: widget.business.email,
+                  );
+
+                  try {
+                    await launchUrl(emailUri);
+                  } catch (e) {
+                    if (!context.mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Unable to open the email app.',
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _reportBusiness() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Report Business'),
+          content: const Text(
+            'Are you sure you want to report this business?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Business reported. Thank you.',
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Report'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final business = widget.business;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Business Profile'),
+        actions: [
+          IconButton(
+            onPressed: _toggleFavourite,
+            icon: Icon(
+              isFavourite
+                  ? Icons.favorite
+                  : Icons.favorite_border,
+            ),
+            tooltip: 'Favourite',
+          ),
+          IconButton(
+            onPressed: _reportBusiness,
+            icon: const Icon(Icons.flag_outlined),
+            tooltip: 'Report',
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              business.name,
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            Text(
+              business.category,
+              style: const TextStyle(
+                fontSize: 18,
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            if (business.reviewCount == 0)
+              const Text(
+                'No reviews yet',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.black54,
+                  fontStyle: FontStyle.italic,
+                ),
+              )
+            else
+              Row(
+                children: [
+                  const Icon(Icons.star),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${business.rating.toStringAsFixed(1)} '
+                        '(${business.reviewCount} reviews)',
+                  ),
+                ],
+              ),
+
+            const SizedBox(height: 16),
+
+            const Text(
+              'Location',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.location_on_outlined),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '${business.country} · '
+                        '${business.region} · '
+                        '${business.city}',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            const Text(
+              'Services',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: business.services.map((service) {
+                return Chip(
+                  label: Text(service),
+                );
+              }).toList(),
+            ),
+
+            const SizedBox(height: 20),
+
+            Row(
+              children: [
+                Icon(
+                  business.availability == 'Remote'
+                      ? Icons.public
+                      : Icons.location_on,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Availability: ${business.availability}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _contactBusiness,
+                icon: const Icon(Icons.phone),
+                label: const Text('Contact Business'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
