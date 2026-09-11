@@ -1118,10 +1118,16 @@ class _BusinessesDirectoryScreenState
           children: [
             TextField(
               controller: searchController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Search businesses, category or services',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    searchController.clear();
+                  },
+                ),
+                border: const OutlineInputBorder(),
               ),
               onSubmitted: (_) => _searchBusinesses(),
             ),
