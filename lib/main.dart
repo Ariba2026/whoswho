@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'professional_profile_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -167,7 +168,14 @@ class _WelcomePageState extends State<WelcomePage> {
               const SizedBox(height: 12),
 
               OutlinedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfessionalProfileFormScreen(),
+                    ),
+                  );
+                },
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 50),
                   side: const BorderSide(
@@ -188,24 +196,24 @@ class _WelcomePageState extends State<WelcomePage> {
 
               const SizedBox(height: 12),
 
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const CreateAccountScreen(),
-                    ),
-                  );
-                },
-                child: const Text(
-                  'Create an Account',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1565C0),
-                  ),
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CreateAccountScreen(),
                 ),
+              );
+            },
+            child: const Text(
+              'Create an Account',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1565C0),
               ),
+            ),
+          ),
 
               const SizedBox(height: 20),
 
@@ -2001,6 +2009,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   TextEditingController();
 
   bool _obscurePassword = true;
+  String _accountType = 'professional';
 
   bool _isLoading = false;
 
@@ -2048,6 +2057,7 @@ confirmPassword.isEmpty) {
             .set({
           'email': user.email,
           'fullName': fullName,
+          'accountType': _accountType,
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
@@ -2112,13 +2122,54 @@ confirmPassword.isEmpty) {
               ),
             ),
             const SizedBox(height: 24),
+            const Text(
+              'Register as',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _accountType,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.account_circle_outlined),
+              ),
+              items: const [
+                DropdownMenuItem(
+                  value: 'professional',
+                  child: Text('Professional'),
+                ),
+                DropdownMenuItem(
+                  value: 'business',
+                  child: Text('Business'),
+                ),
+              ],
+              onChanged: _isLoading
+                  ? null
+                  : (value) {
+                if (value != null) {
+                  setState(() {
+                    _accountType = value;
+                  });
+                }
+              },
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: _fullNameController,
               keyboardType: TextInputType.name,
-              decoration: const InputDecoration(
-                labelText: 'Full name',
-                prefixIcon: Icon(Icons.person_outline),
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: _accountType == 'professional'
+                    ? 'Full name'
+                    : 'Business name',
+                prefixIcon: Icon(
+                  _accountType == 'professional'
+                      ? Icons.person_outline
+                      : Icons.business_outlined,
+                ),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
