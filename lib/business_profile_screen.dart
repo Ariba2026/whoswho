@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
-import 'departments.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'countries.dart';
-class ProfessionalProfileFormScreen extends StatefulWidget {
-  const ProfessionalProfileFormScreen({super.key});
+import 'business_type.dart';
+import 'industries.dart';
+
+class BusinessProfileFormScreen extends StatefulWidget {
+  const BusinessProfileFormScreen({super.key});
 
   @override
-  State<ProfessionalProfileFormScreen> createState() =>
-      _ProfessionalProfileFormScreenState();
+  State<BusinessProfileFormScreen> createState() =>
+      _BusinessProfileFormScreenState();
 }
 
-class _ProfessionalProfileFormScreenState
-    extends State<ProfessionalProfileFormScreen> {
-  final TextEditingController _fullNameController =
+class _BusinessProfileFormScreenState
+    extends State<BusinessProfileFormScreen> {
+  String? _businessType;
+  String? _industry;
+  final TextEditingController _businessNameController =
   TextEditingController();
   final TextEditingController _telephoneController =
   TextEditingController();
@@ -27,23 +31,15 @@ class _ProfessionalProfileFormScreenState
   TextEditingController();
   final TextEditingController _aboutMeController =
   TextEditingController();
-  final TextEditingController _skillsController =
-  TextEditingController();
   final TextEditingController _servicesController =
   TextEditingController();
   final TextEditingController _educationController =
-  TextEditingController();
-  final TextEditingController _certificationsController =
   TextEditingController();
   final TextEditingController _websiteController =
   TextEditingController();
   final TextEditingController _languagesController =
   TextEditingController();
 
-  final List<Map<String, String>> _positions = [];
-  final List<String> _professions = [''];
-  final List<String> _departments = [''];
-  final List<String> _otherDepartments = [''];
   final List<Map<String, String>> _additionalCountries = [];
   String? _yearsOfExperience;
   String? _availability;
@@ -64,36 +60,19 @@ class _ProfessionalProfileFormScreenState
 
   @override
   void dispose() {
-    _fullNameController.dispose();
+    _businessNameController.dispose();
     _telephoneController.dispose();
     _emailController.dispose();
     _locationController.dispose();
     _aboutMeController.dispose();
-    _skillsController.dispose();
     _servicesController.dispose();
     _cityController.dispose();
     _educationController.dispose();
-    _certificationsController.dispose();
     _websiteController.dispose();
     _languagesController.dispose();
     super.dispose();
   }
 
-  void _addProfession() {
-    setState(() {
-      _professions.add('');
-      _departments.add('');
-      _otherDepartments.add('');
-    });
-  }
-  void _addPosition() {
-    setState(() {
-      _positions.add({
-        'title': '',
-        'company': '',
-      });
-    });
-  }
   Future<void> _loadProfile() async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -111,10 +90,11 @@ class _ProfessionalProfileFormScreenState
           .get();
 
       final data = doc.data();
-      final profile = data?['professionalProfile'];
+      final profile = data?['businessProfile'];
 
       if (profile is Map<String, dynamic>) {
-        _fullNameController.text = profile['fullName'] ?? '';
+        _businessNameController.text = profile['businessName'] ?? '';
+        _businessType = profile['businessType'];
         _telephoneController.text = profile['telephone'] ?? '';
         _cityController.text = profile['city'] ?? '';
         _emailController.text = profile['email'] ?? '';
@@ -123,47 +103,14 @@ class _ProfessionalProfileFormScreenState
             countryTelephoneCodes[_locationController.text] ?? '';
         _countryCodeController.text = _countryTelephoneCode;
         _aboutMeController.text = profile['aboutMe'] ?? '';
-        _skillsController.text = profile['skills'] ?? '';
         _servicesController.text = profile['services'] ?? '';
-        _cityController.text = profile['city'] ?? '';
         _educationController.text = profile['education'] ?? '';
-        _certificationsController.text = profile['certifications'] ?? '';
         _websiteController.text = profile['website'] ?? '';
         _languagesController.text = profile['languages'] ?? '';
 
         _yearsOfExperience = profile['yearsOfExperience'];
         _availability = profile['availability'];
 
-        final professions = profile['professions'];
-        if (professions is List) {
-          _professions
-            ..clear()
-            ..addAll(professions.map((item) => item.toString()));
-
-          if (_professions.isEmpty) {
-            _professions.add('');
-          }
-        }
-        final departments = profile['departments'];
-        if (departments is List) {
-          _departments
-            ..clear()
-            ..addAll(departments.map((item) => item.toString()));
-
-          if (_departments.isEmpty) {
-            _departments.add('');
-          }
-        }
-        final positions = profile['positions'];
-        if (positions is List) {
-          _positions
-            ..clear()
-            ..addAll(
-              positions.map(
-                    (item) => Map<String, String>.from(item),
-              ),
-            );
-        }
         final additionalCountries =
         profile['additionalCountries'];
 
@@ -206,7 +153,7 @@ class _ProfessionalProfileFormScreenState
       }
     } catch (e) {
       debugPrint(
-        'Failed to load professional profile: $e',
+        'Failed to load business profile: $e',
       );
     } finally {
       if (mounted) {
@@ -236,9 +183,8 @@ class _ProfessionalProfileFormScreenState
       return;
     }
 
-    if (_fullNameController.text.trim().isEmpty ||
+    if (_businessNameController.text.trim().isEmpty ||
         _locationController.text.trim().isEmpty ||
-        _professions.every((profession) => profession.trim().isEmpty) ||
         _servicesController.text.trim().isEmpty ||
         _availability == null ||
         _languagesController.text.trim().isEmpty) {
@@ -251,27 +197,22 @@ class _ProfessionalProfileFormScreenState
       );
       return;
     }
+
     final profileData = {
-      'fullName': _fullNameController.text.trim(),
+      'businessType': _businessType,
+      'businessName': _businessNameController.text.trim(),
       'telephone': _telephoneController.text.trim(),
       'city': _cityController.text.trim(),
       'email': _emailController.text.trim(),
       'socialMedia': _socialMedia,
       'additionalSocialMedia': _additionalSocialMedia,
-      'professions': _professions,
-      'departments': _departments,
-      'otherDepartments': _otherDepartments,
       'services': _servicesController.text.trim(),
       'country': _locationController.text.trim(),
       'additionalCountries': _additionalCountries,
-      'positions': _positions,
       'aboutMe': _aboutMeController.text.trim(),
       'yearsOfExperience': _yearsOfExperience,
-      'skills': _skillsController.text.trim(),
-      'city': _cityController.text.trim(),
       'availability': _availability,
       'education': _educationController.text.trim(),
-      'certifications': _certificationsController.text.trim(),
       'website': _websiteController.text.trim(),
       'languages': _languagesController.text.trim(),
     };
@@ -280,14 +221,15 @@ class _ProfessionalProfileFormScreenState
           .collection('users')
           .doc(user.uid)
           .set({
-        'professionalProfile': profileData,
+
+        'businessProfile': profileData,
       }, SetOptions(merge: true));
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Professional profile saved successfully.'),
+          content: Text('Business profile saved successfully.'),
         ),
       );
     } catch (e) {
@@ -300,23 +242,23 @@ class _ProfessionalProfileFormScreenState
       );
     }
   }
-@override
-void initState() {
-super.initState();
-_loadProfile();
-}
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
   @override
   Widget build(BuildContext context) {
-if (_isLoadingProfile) {
-return const Scaffold(
-body: Center(
-child: CircularProgressIndicator(),
-),
-);
-}
+    if (_isLoadingProfile) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Professional Profile'),
+        title: const Text('Business Profile'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -324,7 +266,7 @@ child: CircularProgressIndicator(),
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Professional Information',
+              'business Information',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -334,17 +276,60 @@ child: CircularProgressIndicator(),
             const SizedBox(height: 8),
 
             const Text(
-              'Complete your professional profile so people can discover you.',
+              'Complete your business profile so people can discover your business.',
             ),
 
             const SizedBox(height: 24),
 
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(
+                labelText: 'Business Category (optional)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.business),
+              ),
+              initialValue: _businessType,
+              items: businessTypes.map((type) {
+                return DropdownMenuItem<String>(
+                  value: type,
+                  child: Text(type),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _businessType = value;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(
+                labelText: 'Industry (optional)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.factory_outlined),
+              ),
+              initialValue: _industry,
+              items: industries.map((industry) {
+                return DropdownMenuItem<String>(
+                  value: industry,
+                  child: Text(industry),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _industry = value;
+                });
+              },
+            ),
+
+            const SizedBox(height: 16),
+
             TextField(
-              controller: _fullNameController,
+              controller: _businessNameController,
               decoration: InputDecoration(
                 label: RichText(
                   text: const TextSpan(
-                    text: 'Full Name ',
+                    text: 'Business Name ',
                     style: TextStyle(
                       color: Colors.black87,
                       fontSize: 16,
@@ -476,134 +461,10 @@ child: CircularProgressIndicator(),
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
                 labelText: 'Email (optional)',
-                hintText: 'e.g. professional@example.com',
+                hintText: 'e.g. business@example.com',
                 prefixIcon: Icon(Icons.email_outlined),
                 border: OutlineInputBorder(),
               ),
-            ),
-
-            const SizedBox(height: 16),
-
-            const Text(
-              'Professions',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            ..._professions.asMap().entries.map((entry) {
-              final index = entry.key;
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: TextEditingController(
-                        text: _professions[index],
-                      ),
-                      decoration: InputDecoration(
-                        label: RichText(
-                          text: TextSpan(
-                            text: 'Profession ${index + 1} ',
-                            style: const TextStyle(
-                              color: Colors.black87,
-                              fontSize: 16,
-                            ),
-                            children: const [
-                              TextSpan(
-                                text: '*',
-                                style: TextStyle(
-                                  color: Colors.red,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        prefixIcon: const Icon(Icons.work_outline),
-                        border: const OutlineInputBorder(),
-                      ),
-                      onChanged: (value) {
-                        _professions[index] = value;
-                      },
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    Autocomplete<String>(
-                      initialValue: TextEditingValue(
-                        text: _departments[index],
-                      ),
-                      optionsBuilder: (TextEditingValue textEditingValue) {
-                        if (textEditingValue.text.isEmpty) {
-                          return departments;
-                        }
-
-                        return departments.where(
-                              (department) => department.toLowerCase().contains(
-                            textEditingValue.text.toLowerCase(),
-                          ),
-                        );
-                      },
-                      onSelected: (String selection) {
-                        setState(() {
-                          _departments[index] = selection;
-
-                          if (selection != 'Other') {
-                            _otherDepartments[index] = '';
-                          }
-                        });
-                      },
-                      fieldViewBuilder: (
-                          BuildContext context,
-                          TextEditingController textEditingController,
-                          FocusNode focusNode,
-                          VoidCallback onFieldSubmitted,
-                          ) {
-                        return TextField(
-                          controller: textEditingController,
-                          focusNode: focusNode,
-                          decoration: const InputDecoration(
-                            labelText: 'Department (optional)',
-                            hintText: 'Type to search department',
-                            prefixIcon: Icon(Icons.account_tree_outlined),
-                            border: OutlineInputBorder(),
-                          ),
-                          onChanged: (value) {
-                            setState(() {
-                              _departments[index] = value;
-                            });
-                          },
-                        );
-                      },
-                    ),
-
-                    if (_departments[index] == 'Other') ...[
-                      const SizedBox(height: 12),
-
-                      TextField(
-                        decoration: const InputDecoration(
-                          labelText: 'Other Department (optional)',
-                          prefixIcon: Icon(Icons.edit_outlined),
-                          border: OutlineInputBorder(),
-                        ),
-                        onChanged: (value) {
-                          _otherDepartments[index] = value;
-                        },
-                      ),
-                    ],
-                  ],
-                ),
-              );
-            }),
-
-            OutlinedButton.icon(
-              onPressed: _addProfession,
-              icon: const Icon(Icons.add),
-              label: const Text('Add Profession'),
             ),
 
             const SizedBox(height: 8),
@@ -621,7 +482,7 @@ child: CircularProgressIndicator(),
                   });
                 },
                 icon: const Icon(Icons.add),
-                label: const Text('Dual citizen? Add country'),
+                label: const Text('Branches in Other Countries (optional)'),
               ),
             ),
             ..._additionalCountries.asMap().entries.map((entry) {
@@ -735,70 +596,6 @@ child: CircularProgressIndicator(),
                 ),
               );
             }),
-            const SizedBox(height: 28),
-
-            const Text(
-              'Positions Held',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            const Text(
-              'Add positions you currently hold or have held in organizations.',
-            ),
-
-            const SizedBox(height: 12),
-
-            ..._positions.asMap().entries.map((entry) {
-              final index = entry.key;
-
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    children: [
-                      TextField(
-                        controller: TextEditingController(
-                          text: _positions[index]['position'] ?? '',
-                        ),
-                        decoration: InputDecoration(
-                          labelText: 'Position ${index + 1} (optional)',
-                          border: const OutlineInputBorder(),
-                        ),
-                        onChanged: (value) {
-                          _positions[index]['position'] = value;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      TextField(
-                        controller: TextEditingController(
-                          text: _positions[index]['organization'] ?? '',
-                        ),
-                        decoration: const InputDecoration(
-                          labelText: 'Organization',
-                          border: OutlineInputBorder(),
-                        ),
-                        onChanged: (value) {
-                          _positions[index]['organization'] = value;
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-
-            OutlinedButton.icon(
-              onPressed: _addPosition,
-              icon: const Icon(Icons.add),
-              label: const Text('Add Position'),
-            ),
 
             const SizedBox(height: 24),
 
@@ -807,22 +604,23 @@ child: CircularProgressIndicator(),
               maxLines: 5,
               maxLength: 1000,
               decoration: const InputDecoration(
-                labelText: 'About Me (optional)',
+                labelText: 'About Us (optional)',
                 hintText:
-                'Tell us about yourself, professional background, experience and expertise',
+                'Tell us about your business background, experience and expertise',
                 alignLabelWithHint: true,
-                prefixIcon: Icon(Icons.person_outline),
+                prefixIcon: Icon(Icons.business_outlined),
                 border: OutlineInputBorder(),
               ),
             ),
 
+
             const SizedBox(height: 16),
 
             DropdownButtonFormField<String>(
-              value: _yearsOfExperience,
+              initialValue: _yearsOfExperience,
               decoration: const InputDecoration(
-                labelText: 'Years of Experience (optional)',
-                prefixIcon: Icon(Icons.work_history_outlined),
+                labelText: 'Years in Operation (optional)',
+                prefixIcon: Icon(Icons.business_center_outlined),
                 border: OutlineInputBorder(),
               ),
               items: const [
@@ -857,45 +655,31 @@ child: CircularProgressIndicator(),
             const SizedBox(height: 16),
 
             TextFormField(
-              controller: _skillsController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Skills & Expertise (optional)',
-                hintText: 'e.g. Graphic Design, Branding, Photoshop',
-                alignLabelWithHint: true,
-                prefixIcon: Icon(Icons.star_outline),
-                border: OutlineInputBorder(),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            TextFormField(
               controller: _servicesController,
               maxLines: 4,
-    decoration: InputDecoration(
-    label: RichText(
-    text: const TextSpan(
-    text: 'My Services ',
-    style: TextStyle(
-    color: Colors.black87,
-    fontSize: 16,
-    ),
-    children: [
-    TextSpan(
-    text: '*',
-    style: TextStyle(
-    color: Colors.red,
-    ),
-    ),
-    ],
-    ),
-    ),
-    hintText: 'e.g. Logo Design, Video Editing, Website Development',
-    alignLabelWithHint: true,
-    prefixIcon: const Icon(Icons.design_services_outlined),
-      border: const OutlineInputBorder(),
-    ),
+              decoration: InputDecoration(
+                label: RichText(
+                  text: const TextSpan(
+                    text: 'Our Services ',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 16,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: '*',
+                        style: TextStyle(
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                hintText: 'e.g. Catering, Construction, Transport, Graphic Design',
+                alignLabelWithHint: true,
+                prefixIcon: const Icon(Icons.design_services_outlined),
+                border: const OutlineInputBorder(),
+              ),
             ),
 
             const SizedBox(height: 16),
@@ -944,46 +728,33 @@ child: CircularProgressIndicator(),
               },
             ),
 
-      const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-      TextFormField(
-        controller: _educationController,
-        maxLines: 4,
-        decoration: const InputDecoration(
-          labelText: 'Education & Qualifications (optional)',
-          hintText: 'e.g. BSc Computer Science, Diploma in Graphic Design',
-          alignLabelWithHint: true,
-          prefixIcon: Icon(Icons.school_outlined),
-          border: OutlineInputBorder(),
-        ),
-      ),
+            TextFormField(
+              controller: _educationController,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'Business Registration & Accreditation (optional)',
+                hintText:
+                'e.g. Registration number, accrediting body, business licence details',
+                alignLabelWithHint: true,
+                prefixIcon: Icon(Icons.verified_outlined),
+                border: OutlineInputBorder(),
+              ),
+            ),
 
-      const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-      TextFormField(
-        controller: _certificationsController,
-        maxLines: 3,
-        decoration: const InputDecoration(
-          labelText: 'Certifications & Licences (optional)',
-          hintText: 'e.g. AWS Certified, Driving Licence, CPA',
-          alignLabelWithHint: true,
-          prefixIcon: Icon(Icons.verified_outlined),
-          border: OutlineInputBorder(),
-        ),
-      ),
-
-      const SizedBox(height: 16),
-
-      TextFormField(
-        controller: _websiteController,
-        keyboardType: TextInputType.url,
-        decoration: const InputDecoration(
-          labelText: 'Website / Portfolio (optional)',
-          hintText: 'e.g. https://example.com',
-          prefixIcon: Icon(Icons.language),
-          border: OutlineInputBorder(),
-        ),
-      ),
+            TextFormField(
+              controller: _websiteController,
+              keyboardType: TextInputType.url,
+              decoration: const InputDecoration(
+                labelText: 'Website / Portfolio (optional)',
+                hintText: 'e.g. https://example.com',
+                prefixIcon: Icon(Icons.language),
+                border: OutlineInputBorder(),
+              ),
+            ),
             const SizedBox(height: 16),
 
             OutlinedButton.icon(
@@ -1076,37 +847,37 @@ child: CircularProgressIndicator(),
               label: const Text('Add Social Media'),
             ),
 
-      const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-      TextFormField(
-        controller: _languagesController,
-        maxLines: 2,
-        decoration: InputDecoration(
-          label: RichText(
-            text: const TextSpan(
-              text: 'Languages ',
-              style: TextStyle(
-                color: Colors.black87,
-                fontSize: 16,
-              ),
-              children: [
-                TextSpan(
-                  text: '*',
-                  style: TextStyle(
-                    color: Colors.red,
+            TextFormField(
+              controller: _languagesController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                label: RichText(
+                  text: const TextSpan(
+                    text: 'Languages ',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 16,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: '*',
+                        style: TextStyle(
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+                hintText: 'e.g. English, Swahili, French',
+                alignLabelWithHint: true,
+                prefixIcon: const Icon(Icons.translate),
+                border: const OutlineInputBorder(),
+              ),
             ),
-          ),
-          hintText: 'e.g. English, Swahili, French',
-          alignLabelWithHint: true,
-          prefixIcon: const Icon(Icons.translate),
-          border: const OutlineInputBorder(),
-        ),
-      ),
 
-      const SizedBox(height: 32),
+            const SizedBox(height: 32),
 
             SizedBox(
               width: double.infinity,
