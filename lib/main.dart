@@ -5,6 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'business_profile_screen.dart';
+import 'social_media_wall.dart';
+import 'sign_in_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -128,7 +130,7 @@ class _WelcomePageState extends State<WelcomePage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const DirectoryScreen(),
+                        builder: (context) => const SignInScreen(),
                       ),
                     );
                   },
@@ -168,11 +170,12 @@ class _WelcomePageState extends State<WelcomePage> {
               const SizedBox(height: 12),
 
               OutlinedButton(
+
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const BusinessProfileFormScreen(),
+                      builder: (context) => const SocialMediaWall(),
                     ),
                   );
                 },

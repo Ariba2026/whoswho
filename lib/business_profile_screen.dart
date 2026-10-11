@@ -95,6 +95,7 @@ class _BusinessProfileFormScreenState
       if (profile is Map<String, dynamic>) {
         _businessNameController.text = profile['businessName'] ?? '';
         _businessType = profile['businessType'];
+        _industry = profile['industry'];
         _telephoneController.text = profile['telephone'] ?? '';
         _cityController.text = profile['city'] ?? '';
         _emailController.text = profile['email'] ?? '';
@@ -200,6 +201,7 @@ class _BusinessProfileFormScreenState
 
     final profileData = {
       'businessType': _businessType,
+      'industry': _industry,
       'businessName': _businessNameController.text.trim(),
       'telephone': _telephoneController.text.trim(),
       'city': _cityController.text.trim(),
@@ -281,46 +283,103 @@ class _BusinessProfileFormScreenState
 
             const SizedBox(height: 24),
 
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: 'Business Category (optional)',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.business),
+            Autocomplete<String>(
+              initialValue: TextEditingValue(
+                text: _businessType ?? '',
               ),
-              initialValue: _businessType,
-              items: businessTypes.map((type) {
-                return DropdownMenuItem<String>(
-                  value: type,
-                  child: Text(type),
+              optionsBuilder: (TextEditingValue textEditingValue) {
+                if (textEditingValue.text.isEmpty) {
+                  return businessTypes;
+                }
+
+                return businessTypes.where((type) {
+                return type.toLowerCase().contains(
+                textEditingValue.text.toLowerCase(),
                 );
-              }).toList(),
-              onChanged: (value) {
+                });
+
+              },
+              onSelected: (value) {
                 setState(() {
                   _businessType = value;
                 });
               },
+              fieldViewBuilder: (
+                  context,
+                  textEditingController,
+                  focusNode,
+                  onFieldSubmitted,
+                  ) {
+                return TextFormField(
+                  controller: textEditingController,
+                  focusNode: focusNode,
+                  decoration: const InputDecoration(
+                    labelText: 'Business Category (optional)',
+                    hintText: 'Type to search business categories',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.business),
+                    suffixIcon: Icon(Icons.arrow_drop_down),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _businessType = businessTypes.contains(value)
+                          ? value
+                          : null;
+                    });
+                  },
+                );
+              },
             ),
+
             const SizedBox(height: 16),
 
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: 'Industry (optional)',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.factory_outlined),
+            Autocomplete<String>(
+              initialValue: TextEditingValue(
+                text: _industry ?? '',
               ),
-              initialValue: _industry,
-              items: industries.map((industry) {
-                return DropdownMenuItem<String>(
-                  value: industry,
-                  child: Text(industry),
+              optionsBuilder: (TextEditingValue textEditingValue) {
+                if (textEditingValue.text.isEmpty) {
+                  return industries;
+                }
+
+                return industries.where((industry) {
+                return industry.toLowerCase().contains(
+                textEditingValue.text.toLowerCase(),
                 );
-              }).toList(),
-              onChanged: (value) {
+                });
+              },
+              onSelected: (value) {
                 setState(() {
                   _industry = value;
                 });
               },
+              fieldViewBuilder: (
+                  context,
+                  textEditingController,
+                  focusNode,
+                  onFieldSubmitted,
+                  ) {
+                return TextFormField(
+                  controller: textEditingController,
+                  focusNode: focusNode,
+                  decoration: const InputDecoration(
+                    labelText: 'Industry (optional)',
+                    hintText: 'Type to search industries',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.factory_outlined),
+                    suffixIcon: Icon(Icons.arrow_drop_down),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _industry = industries.contains(value)
+                          ? value
+                          : null;
+                    });
+                  },
+                );
+              },
             ),
+
 
             const SizedBox(height: 16),
 
