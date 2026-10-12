@@ -1,5 +1,9 @@
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'business_profile_screen.dart';
+import 'professional_profile_screen.dart';
 
 class SocialMediaWall extends StatelessWidget {
   const SocialMediaWall({super.key});
@@ -21,7 +25,7 @@ class SocialMediaWall extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _buildBanner(),
-                    _buildFeatureBar(),
+                    _buildFeatureBar(context),
                     _buildMainArea(),
                   ],
                 ),
@@ -67,7 +71,17 @@ class SocialMediaWall extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               InkWell(
-                onTap: () {},
+                onTap: () async {
+                  await FirebaseAuth.instance.signOut();
+
+                  if (!context.mounted) return;
+
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/',
+                        (route) => false,
+                  );
+                },
                 child: const Text(
                   'Sign Out',
                   style: TextStyle(
@@ -236,38 +250,83 @@ class SocialMediaWall extends StatelessWidget {
   }
 
   // HORIZONTAL, SCROLLABLE FEATURE BAR
-  Widget _buildFeatureBar() {
+
+  Widget _buildFeatureBar(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.symmetric(
-        vertical: 12,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 12,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Row(
           children: [
             _featureItem(
               Icons.handshake_outlined,
-              'Ask for Partnership',
+              'Hire Me',
             ),
             _featureItem(
               Icons.groups_outlined,
-              'Partners',
+              'Customers',
             ),
-            _featureItem(
-              Icons.notifications_outlined,
-              'Notifications',
-            ),
-            _featureItem(
-              Icons.person_outline,
-              'My Profile',
-            ),
-            _featureItem(
-              Icons.business_outlined,
-              'Our Profile',
+            FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+              future: user == null
+                  ? null
+                  : FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .get(),
+              builder: (context, snapshot) {
+                final data = snapshot.data?.data() ?? {};
+                final accountType = data['accountType'];
+                final profileTitle =
+                accountType == 'business' ||
+                    accountType == 'Business'
+                    ? data['businessProfile'] != null
+                    ? 'Our Profile'
+                    : 'Profile'
+                    : data['professionalProfile'] != null
+                    ? 'My Profile'
+                    : 'Profile';
+
+                return _featureItem(
+                  Icons.person_outline,
+                  profileTitle,
+                  onTap: () async {
+                    if (user == null) return;
+
+                    final doc = await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user.uid)
+                        .get();
+
+                    final account =
+                    doc.data()?['accountType'];
+
+                    if (!context.mounted) return;
+
+                    if (account == 'business' ||
+                        account == 'Business') {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                          const BusinessProfileFormScreen(),
+                        ),
+                      );
+                    } else {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                          const ProfessionalProfileFormScreen(),
+                        ),
+                      );
+                    }
+                  },
+                );
+              },
             ),
           ],
         ),
@@ -275,11 +334,15 @@ class SocialMediaWall extends StatelessWidget {
     );
   }
 
-  Widget _featureItem(IconData icon, String label) {
+  Widget _featureItem(
+      IconData icon,
+      String label, {
+        VoidCallback? onTap,
+      }) {
     return Padding(
       padding: const EdgeInsets.only(right: 10),
       child: OutlinedButton.icon(
-        onPressed: () {},
+        onPressed: onTap,
         icon: Icon(icon, size: 19),
         label: Text(label),
         style: OutlinedButton.styleFrom(

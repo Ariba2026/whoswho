@@ -1,7 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'social_media_wall.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -17,11 +17,78 @@ final _passwordController = TextEditingController();
 
 bool _isLoading = false;
 bool _obscurePassword = true;
+final Map<String, int> _failedAttempts = {};
+final Map<String, DateTime> _lockoutUntil = {};
+
+static const int _maxAttempts = 6;
+static const Duration _lockoutDuration = Duration(hours: 3);
+Future<void> _loadAttemptData(String emailKey) async {
+  final prefs = await SharedPreferences.getInstance();
+
+  final attempts = prefs.getInt('signin_failed_$emailKey') ?? 0;
+  final lockoutTimestamp = prefs.getInt('signin_lockout_$emailKey');
+
+  _failedAttempts[emailKey] = attempts;
+
+  if (lockoutTimestamp != null) {
+    _lockoutUntil[emailKey] =
+        DateTime.fromMillisecondsSinceEpoch(lockoutTimestamp);
+  } else {
+    _lockoutUntil.remove(emailKey);
+  }
+}
+
+Future<void> _saveAttemptData(String emailKey) async {
+  final prefs = await SharedPreferences.getInstance();
+
+  final attempts = _failedAttempts[emailKey] ?? 0;
+  final lockoutEnd = _lockoutUntil[emailKey];
+
+  if (attempts > 0) {
+    await prefs.setInt('signin_failed_$emailKey', attempts);
+  } else {
+    await prefs.remove('signin_failed_$emailKey');
+  }
+
+  if (lockoutEnd != null) {
+    await prefs.setInt(
+      'signin_lockout_$emailKey',
+      lockoutEnd.millisecondsSinceEpoch,
+    );
+  } else {
+    await prefs.remove('signin_lockout_$emailKey');
+  }
+}
 
 Future<void> _signIn() async {
 final email = _emailController.text.trim();
 final password = _passwordController.text;
+final emailKey = email.toLowerCase();
+await _loadAttemptData(emailKey);
+final lockoutEnd = _lockoutUntil[emailKey];
 
+if (lockoutEnd != null) {
+  if (DateTime.now().isBefore(lockoutEnd)) {
+    final remaining = lockoutEnd.difference(DateTime.now());
+    final hours = remaining.inHours;
+    final minutes = remaining.inMinutes.remainder(60);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Too many failed attempts. Try again in '
+              '${hours}h ${minutes}m.',
+        ),
+      ),
+    );
+    return;
+
+  } else {
+    _lockoutUntil.remove(emailKey);
+    _failedAttempts.remove(emailKey);
+    await _saveAttemptData(emailKey);
+  }
+}
 if (email.isEmpty || password.isEmpty) {
 ScaffoldMessenger.of(context).showSnackBar(
 const SnackBar(
@@ -40,6 +107,9 @@ await FirebaseAuth.instance.signInWithEmailAndPassword(
 email: email,
 password: password,
 );
+_failedAttempts.remove(emailKey);
+_lockoutUntil.remove(emailKey);
+await _saveAttemptData(emailKey);
 
 if (!mounted) return;
 
@@ -51,7 +121,39 @@ builder: (context) => const SocialMediaWall(),
 );
 } on FirebaseAuthException catch (e) {
 String message;
+if (e.code == 'wrong-password' ||
+    e.code == 'user-not-found' ||
+    e.code == 'invalid-credential') {
+  _failedAttempts[emailKey] =
+      (_failedAttempts[emailKey] ?? 0) + 1;
 
+  final attempts = _failedAttempts[emailKey]!;
+  await _saveAttemptData(emailKey);
+
+  if (attempts >= _maxAttempts) {
+    _lockoutUntil[emailKey] ??=
+        DateTime.now().add(_lockoutDuration);
+
+    await _saveAttemptData(emailKey);
+
+    message =
+    'You have reached 6 failed attempts. '
+        'Please try again after 3 hours.';
+  }else {
+    final remainingAttempts = _maxAttempts - attempts;
+
+    message =
+    'Incorrect email or password. '
+        '$remainingAttempts attempts remaining.';
+  }
+
+  if (!mounted) return;
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message)),
+  );
+  return;
+}
 if (e.code == 'user-not-found' ||
 e.code == 'invalid-credential') {
 message = 'No matching account was found. Check your email and password.';
@@ -87,6 +189,53 @@ _isLoading = false;
 }
 }
 
+Future<void> _resetPassword() async {
+  final email = _emailController.text.trim();
+
+  if (email.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please enter your email address first.'),
+      ),
+    );
+    return;
+  }
+
+  try {
+    await FirebaseAuth.instance.sendPasswordResetEmail(
+      email: email,
+    );
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'If an account exists for this email, a password-reset email will be sent.',
+        ),
+      ),
+    );
+  } on FirebaseAuthException catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          e.code == 'invalid-email'
+              ? 'Please enter a valid email address.'
+              : 'Could not send the reset email. Please try again.',
+        ),
+      ),
+    );
+  } catch (_) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Something went wrong. Please try again.'),
+      ),
+    );
+  }
+}
 @override
 void dispose() {
 _emailController.dispose();
@@ -167,7 +316,15 @@ _signIn();
 },
 ),
 
-const SizedBox(height: 24),
+  Align(
+    alignment: Alignment.centerRight,
+    child: TextButton(
+      onPressed: _isLoading ? null : _resetPassword,
+      child: const Text('Forgot Password?'),
+    ),
+  ),
+
+  const SizedBox(height: 8),
 
 ElevatedButton(
 onPressed: _isLoading ? null : _signIn,
