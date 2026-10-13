@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'business_profile_screen.dart';
 import 'professional_profile_screen.dart';
+import 'notifications_screen.dart';
 
 class SocialMediaWall extends StatelessWidget {
   const SocialMediaWall({super.key});
@@ -251,86 +252,146 @@ class SocialMediaWall extends StatelessWidget {
 
   // HORIZONTAL, SCROLLABLE FEATURE BAR
 
+
   Widget _buildFeatureBar(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          children: [
-            _featureItem(
-              Icons.handshake_outlined,
-              'Hire Me',
-            ),
-            _featureItem(
-              Icons.groups_outlined,
-              'Customers',
-            ),
-            FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-              future: user == null
-                  ? null
-                  : FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(user.uid)
-                  .get(),
-              builder: (context, snapshot) {
-                final data = snapshot.data?.data() ?? {};
-                final accountType = data['accountType'];
-                final profileTitle =
-                accountType == 'business' ||
-                    accountType == 'Business'
-                    ? data['businessProfile'] != null
-                    ? 'Our Profile'
-                    : 'Profile'
-                    : data['professionalProfile'] != null
-                    ? 'My Profile'
-                    : 'Profile';
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: user == null
+          ? null
+          : FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data() ?? {};
+        final accountType = data['accountType'];
 
-                return _featureItem(
-                  Icons.person_outline,
-                  profileTitle,
-                  onTap: () async {
-                    if (user == null) return;
+        final isBusiness =
+            accountType == 'business' ||
+                accountType == 'Business';
 
-                    final doc = await FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(user.uid)
-                        .get();
+        final profile = isBusiness
+            ? data['businessProfile']
+            : data['professionalProfile'];
 
-                    final account =
-                    doc.data()?['accountType'];
+        final profileTitle = profile == null
+            ? 'Profile'
+            : isBusiness
+            ? 'Our Profile'
+            : 'My Profile';
 
-                    if (!context.mounted) return;
+        Future<void> openProfile() async {
+          if (user == null) return;
 
-                    if (account == 'business' ||
-                        account == 'Business') {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                          const BusinessProfileFormScreen(),
+          if (isBusiness) {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                const BusinessProfileFormScreen(),
+              ),
+            );
+          } else {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                const ProfessionalProfileFormScreen(),
+              ),
+            );
+          }
+        }
+
+        return Container(
+          color: Colors.white,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.only(
+                  right: 12,
+                  top: 12,
+                  bottom: 12,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _featureItem(
+                      Icons.person_outline,
+                      profileTitle,
+                      onTap: openProfile,
+                    ),
+                    _featureItem(
+                      Icons.notifications_outlined,
+                      'Notifications',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                            const NotificationsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+                Container(
+                  width: double.infinity,
+                  color: const Color(0xFFF5F7FA),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        size: 18,
+                        color: Color(0xFF2878C8),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isBusiness
+                                  ? 'Complete your profile so people can discover you and learn about your services.'
+                                  : 'Complete your profile so people can discover you, your skills and your services.',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF333333),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            InkWell(
+                              onTap: openProfile,
+                              child: const Text(
+                                'Complete your profile →',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2878C8),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      );
-                    } else {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                          const ProfessionalProfileFormScreen(),
-                        ),
-                      );
-                    }
-                  },
-                );
-              },
-            ),
-          ],
-        ),
-      ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 

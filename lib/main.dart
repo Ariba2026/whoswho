@@ -27,7 +27,7 @@ class WhosWhoApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const WelcomePage(),
+      home: const AuthGate(),
     );
   }
 }
@@ -2063,6 +2063,20 @@ confirmPassword.isEmpty) {
           'accountType': _accountType,
           'createdAt': FieldValue.serverTimestamp(),
         });
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('notifications')
+            .add({
+          'title': 'Welcome to WhosWho',
+          'message':
+          'Welcome to WhosWho! Your account has been created successfully. '
+              'Discover professionals, find services, and connect with others.',
+          'createdAt': FieldValue.serverTimestamp(),
+          'isRead': false,
+          'type': 'welcome',
+        });
       }
 
       if (!mounted) return;
@@ -2241,6 +2255,32 @@ confirmPassword.isEmpty) {
           ],
         ),
       ),
+    );
+  }
+}
+
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        if (snapshot.hasData) {
+          return const SocialMediaWall();
+        }
+
+        return const WelcomePage();
+      },
     );
   }
 }
