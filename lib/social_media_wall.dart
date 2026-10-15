@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'business_profile_screen.dart';
 import 'professional_profile_screen.dart';
 import 'notifications_screen.dart';
+import 'advertising_screen.dart';
 
 class SocialMediaWall extends StatelessWidget {
   const SocialMediaWall({super.key});
@@ -19,15 +20,15 @@ class SocialMediaWall extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            _buildTopBar(),
+            _buildTopBar(context),
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _buildBanner(),
-                    _buildFeatureBar(context),
-                    _buildMainArea(),
+                    _buildProfileReminder(context),
+                    _buildMainArea(context)
                   ],
                 ),
               ),
@@ -38,9 +39,11 @@ class SocialMediaWall extends StatelessWidget {
     );
   }
 
-  // TOP NAVIGATION BAR
 
-  Widget _buildTopBar() {
+  // TOP NAVIGATION BAR
+  Widget _buildTopBar(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
     return Container(
       width: double.infinity,
       color: navy,
@@ -48,59 +51,137 @@ class SocialMediaWall extends StatelessWidget {
         horizontal: 8,
         vertical: 14,
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return Row(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _topNavItem(Icons.home_outlined, 'Home'),
-                      const SizedBox(width: 16),
-                      _topNavItem(Icons.work_outline, 'Jobs'),
-                      const SizedBox(width: 16),
-                      _topNavItem(
-                        Icons.storefront_outlined,
-                        'Buy & Sell',
-                      ),
-                    ],
+      child: Row(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _topNavItem(
+                    Icons.home_outlined,
+                    'Home',
+                    onTap: () {},
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              InkWell(
-                onTap: () async {
-                  await FirebaseAuth.instance.signOut();
+                  const SizedBox(width: 16),
 
-                  if (!context.mounted) return;
+                  StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                    stream: user == null
+                        ? null
+                        : FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user.uid)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      final data = snapshot.data?.data() ?? {};
 
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/',
-                        (route) => false,
-                  );
-                },
-                child: const Text(
-                  'Sign Out',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+                      final accountType = data['accountType']
+                          ?.toString()
+                          .trim()
+                          .toLowerCase();
+
+                      final profileTitle = accountType == 'business'
+                          ? 'Our Profile'
+                          : 'My Profile';
+
+                      return _topNavItem(
+                        Icons.person_outline,
+                        profileTitle,
+                        onTap: () async {
+                          final currentUser =
+                              FirebaseAuth.instance.currentUser;
+
+                          if (currentUser == null) return;
+
+                          final userDoc = await FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(currentUser.uid)
+                              .get();
+
+                          if (!context.mounted) return;
+
+                          final type = userDoc.data()?['accountType']
+                              ?.toString()
+                              .trim()
+                              .toLowerCase();
+
+                          if (type == 'business') {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                const BusinessProfileFormScreen(),
+                              ),
+                            );
+                          } else {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                const ProfessionalProfileFormScreen(),
+                              ),
+                            );
+                          }
+                        },
+                      );
+                    },
                   ),
-                ),
+
+                  const SizedBox(width: 16),
+
+                  _topNavItem(
+                    Icons.notifications_none,
+                    'Notifications',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
-            ],
-          );
-        },
+            ),
+          ),
+
+          const SizedBox(width: 10),
+
+          InkWell(
+            onTap: () async {
+              await FirebaseAuth.instance.signOut();
+
+              if (!context.mounted) return;
+
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/',
+                    (route) => false,
+              );
+            },
+            child: const Text(
+              'Sign Out',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
-  Widget _topNavItem(IconData icon, String label) {
+
+
+  Widget _topNavItem(IconData icon,
+      String label, {
+        required VoidCallback onTap,
+      }) {
     return InkWell(
-      onTap: () {},
+      onTap: onTap,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -250,16 +331,18 @@ class SocialMediaWall extends StatelessWidget {
     );
   }
 
-  // HORIZONTAL, SCROLLABLE FEATURE BAR
 
+  // PROFILE COMPLETION REMINDER
 
-  Widget _buildFeatureBar(BuildContext context) {
+  Widget _buildProfileReminder(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
+    if (user == null) {
+      return const SizedBox.shrink();
+    }
+
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: user == null
-          ? null
-          : FirebaseFirestore.instance
+      stream: FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .snapshots(),
@@ -268,126 +351,78 @@ class SocialMediaWall extends StatelessWidget {
         final accountType = data['accountType'];
 
         final isBusiness =
-            accountType == 'business' ||
-                accountType == 'Business';
+            accountType == 'business' || accountType == 'Business';
 
         final profile = isBusiness
             ? data['businessProfile']
             : data['professionalProfile'];
 
-        final profileTitle = profile == null
-            ? 'Profile'
-            : isBusiness
-            ? 'Our Profile'
-            : 'My Profile';
-
-        Future<void> openProfile() async {
-          if (user == null) return;
-
-          if (isBusiness) {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                const BusinessProfileFormScreen(),
-              ),
-            );
-          } else {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                const ProfessionalProfileFormScreen(),
-              ),
-            );
-          }
+        if (profile != null || !snapshot.hasData) {
+          return const SizedBox.shrink();
         }
 
         return Container(
-          color: Colors.white,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          width: double.infinity,
+          color: const Color(0xFFF5F7FA),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 10,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.only(
-                  right: 12,
-                  top: 12,
-                  bottom: 12,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+              const Icon(
+                Icons.info_outline,
+                size: 18,
+                color: Color(0xFF2878C8),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _featureItem(
-                      Icons.person_outline,
-                      profileTitle,
-                      onTap: openProfile,
+                    Text(
+                      isBusiness
+                          ? 'Complete your profile so people can discover you and learn about your services.'
+                          : 'Complete your profile so people can discover you, your skills and your services.',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF333333),
+                      ),
                     ),
-                    _featureItem(
-                      Icons.notifications_outlined,
-                      'Notifications',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                            const NotificationsScreen(),
-                          ),
-                        );
+                    const SizedBox(height: 4),
+                    InkWell(
+                      onTap: () async {
+                        if (isBusiness) {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                              const BusinessProfileFormScreen(),
+                            ),
+                          );
+                        } else {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                              const ProfessionalProfileFormScreen(),
+                            ),
+                          );
+                        }
                       },
+                      child: const Text(
+                        'Complete your profile →',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2878C8),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-                Container(
-                  width: double.infinity,
-                  color: const Color(0xFFF5F7FA),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.info_outline,
-                        size: 18,
-                        color: Color(0xFF2878C8),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isBusiness
-                                  ? 'Complete your profile so people can discover you and learn about your services.'
-                                  : 'Complete your profile so people can discover you, your skills and your services.',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF333333),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            InkWell(
-                              onTap: openProfile,
-                              child: const Text(
-                                'Complete your profile →',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF2878C8),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
             ],
           ),
         );
@@ -395,65 +430,151 @@ class SocialMediaWall extends StatelessWidget {
     );
   }
 
-  Widget _featureItem(
-      IconData icon,
-      String label, {
-        VoidCallback? onTap,
-      }) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 10),
-      child: OutlinedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, size: 19),
-        label: Text(label),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: navy,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 12,
-          ),
-          side: const BorderSide(
-            color: Color(0xFFD5DDE8),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      ),
-    );
-  }
-
   // MAIN SOCIAL AREA
-  Widget _buildMainArea() {
+  Widget _buildMainArea(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+
           _panel(
-            title: 'Create a Post',
+            title: 'Sponsored Advertisements',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const TextField(
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    hintText: 'What would you like to share?',
-                    border: OutlineInputBorder(),
+                // FEATURED SPONSORED ADVERT
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5EEE8),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFF493022),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.campaign,
+                            color: Color(0xFF493022),
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'FEATURED SPONSORED ADVERT',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF493022),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Container(
+                        height: 120,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE3D5C9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.apartment,
+                          size: 64,
+                          color: Color(0xFF493022),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Domajents Consultancy',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text('Building & Construction'),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Explore building and construction services '
+                            'for your next project.',
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // SCROLLING SPONSORED ADVERTS
+                const Text(
+                  'More Sponsored Adverts',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                SizedBox(
+                  height: 200,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      _buildPlaceholderAdvert(
+                        context,
+                        company: 'GreenNest Home Solutions',
+                        category: 'Home & Cleaning Services',
+                        description:
+                        'Home care and cleaning services for '
+                            'homes and businesses.',
+                        icon: Icons.cleaning_services,
+                      ),
+                      _buildPlaceholderAdvert(
+                        context,
+                        company: 'BrightPath Digital Hub',
+                        category: 'Digital & Technology Services',
+                        description:
+                        'Discover digital solutions for your '
+                            'business and professional needs.',
+                        icon: Icons.devices,
+                      ),
+                      _buildPlaceholderAdvert(
+                        context,
+                        company: 'Celebration Point Events',
+                        category: 'Events & Hospitality',
+                        description:
+                        'Services to help make your special '
+                            'events memorable.',
+                        icon: Icons.celebration,
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 12),
+
                 Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.send),
-                    label: const Text('Post'),
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const AdvertisingScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.campaign),
+                    label: const Text('Advertise with us'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF493022),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
+
           const SizedBox(height: 16),
           _panel(
             title: 'Social Feed',
@@ -493,6 +614,79 @@ class SocialMediaWall extends StatelessWidget {
       ),
     );
   }
+
+
+  Widget _buildPlaceholderAdvert(BuildContext context, {
+    required String company,
+    required String category,
+    required String description,
+    required IconData icon,
+  }) {
+    return Container(
+      width: 250,
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'SPONSORED',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF493022),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            height: 45,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5EEE8),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 38,
+              color: const Color(0xFF493022),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            company,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            category,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   // REUSABLE WHITE PANEL
   Widget _panel({

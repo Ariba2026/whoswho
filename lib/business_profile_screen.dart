@@ -380,11 +380,11 @@ class _BusinessProfileFormScreenState
               },
             ),
 
-
             const SizedBox(height: 16),
 
             TextField(
               controller: _businessNameController,
+              maxLength: 150,
               decoration: InputDecoration(
                 label: RichText(
                   text: const TextSpan(
@@ -407,6 +407,7 @@ class _BusinessProfileFormScreenState
                 border: const OutlineInputBorder(),
               ),
             ),
+
 
             const SizedBox(height: 16),
 
@@ -502,14 +503,19 @@ class _BusinessProfileFormScreenState
                 ),
               ],
             ),
+
             const SizedBox(height: 16),
 
             TextFormField(
               controller: _cityController,
+              maxLines: 2,
+              maxLength: 300,
               decoration: const InputDecoration(
-                labelText: 'City/Town (optional)',
+                labelText: 'Physical Address (optional)',
+                hintText: 'City, town, street, estate, building, village, etc.',
                 prefixIcon: Icon(Icons.location_city),
                 border: OutlineInputBorder(),
+                alignLabelWithHint: true,
               ),
             ),
 
@@ -517,14 +523,15 @@ class _BusinessProfileFormScreenState
 
             TextFormField(
               controller: _emailController,
+              maxLength: 254,
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
                 labelText: 'Email (optional)',
-                hintText: 'e.g. business@example.com',
                 prefixIcon: Icon(Icons.email_outlined),
                 border: OutlineInputBorder(),
               ),
             ),
+
 
             const SizedBox(height: 8),
 
@@ -544,56 +551,97 @@ class _BusinessProfileFormScreenState
                 label: const Text('Branches in Other Countries (optional)'),
               ),
             ),
-            ..._additionalCountries.asMap().entries.map((entry) {
-              final index = entry.key;
 
-              return Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Column(
-                  children: [
-                    Autocomplete<String>(
-                      initialValue: TextEditingValue(
-                        text: _additionalCountries[index]['country'] ?? '',
-                      ),
-                      optionsBuilder: (TextEditingValue textEditingValue) {
-                        if (textEditingValue.text.isEmpty) {
-                          return countries;
-                        }
+..._additionalCountries.asMap().entries.map((entry) {
+final index = entry.key;
 
-                        return countries.where(
-                              (country) => country.toLowerCase().contains(
-                            textEditingValue.text.toLowerCase(),
-                          ),
-                        );
-                      },
-                      onSelected: (String selection) {
-                        setState(() {
-                          _additionalCountries[index]['country'] = selection;
-                        });
-                      },
-                      fieldViewBuilder: (
-                          BuildContext context,
-                          TextEditingController textEditingController,
-                          FocusNode focusNode,
-                          VoidCallback onFieldSubmitted,
-                          ) {
-                        return TextField(
-                          controller: textEditingController,
-                          focusNode: focusNode,
-                          onChanged: (value) {
-                            _additionalCountries[index]['country'] = value;
-                          },
-                          decoration: const InputDecoration(
-                            labelText: 'Additional Country',
-                            hintText: 'Type to search country',
-                            prefixIcon: Icon(Icons.public),
-                            border: OutlineInputBorder(),
-                          ),
-                        );
-                      },
-                    ),
+return Padding(
+padding: const EdgeInsets.only(top: 12),
+child: Column(
+children: [
+Autocomplete<String>(
+initialValue: TextEditingValue(
+text: _additionalCountries[index]['country'] ?? '',
+),
+optionsBuilder: (textEditingValue) {
+if (textEditingValue.text.isEmpty) {
+return countries;
+}
 
-                    const SizedBox(height: 12),
+return countries.where(
+(country) => country.toLowerCase().contains(
+textEditingValue.text.toLowerCase(),
+),
+);
+},
+onSelected: (selection) {
+setState(() {
+_additionalCountries[index]['country'] = selection;
+});
+},
+fieldViewBuilder: (
+context,
+textEditingController,
+focusNode,
+onFieldSubmitted,
+) {
+return TextField(
+controller: textEditingController,
+focusNode: focusNode,
+onChanged: (value) {
+_additionalCountries[index]['country'] = value;
+},
+decoration: const InputDecoration(
+labelText: 'Additional Country',
+hintText: 'Type to search country',
+prefixIcon: Icon(Icons.public),
+border: OutlineInputBorder(),
+),
+);
+},
+),
+
+const SizedBox(height: 12),
+
+TextFormField(
+initialValue:
+_additionalCountries[index]['telephone'] ?? '',
+maxLength: 20,
+keyboardType: TextInputType.phone,
+decoration: const InputDecoration(
+labelText: 'Branch Telephone (optional)',
+prefixIcon: Icon(Icons.phone_outlined),
+border: OutlineInputBorder(),
+),
+onChanged: (value) {
+_additionalCountries[index]['telephone'] = value;
+},
+),
+
+const SizedBox(height: 12),
+
+TextFormField(
+initialValue: _additionalCountries[index]['city'] ?? '',
+maxLength: 300,
+maxLines: 2,
+decoration: const InputDecoration(
+labelText: 'Branch Physical Address (optional)',
+hintText: 'City, town, street, estate, building, etc.',
+prefixIcon: Icon(Icons.location_city),
+border: OutlineInputBorder(),
+alignLabelWithHint: true,
+),
+onChanged: (value) {
+_additionalCountries[index]['city'] = value;
+},
+),
+],
+),
+);
+}),
+
+
+const SizedBox(height: 12),
 
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -615,40 +663,30 @@ class _BusinessProfileFormScreenState
                           ),
                         ),
 
-                        const SizedBox(width: 8),
+              const SizedBox(height: 16),
 
-                        Expanded(
-                          child: TextFormField(
-                            initialValue:
-                            _additionalCountries[index]['telephone'] ?? '',
-                            keyboardType: TextInputType.phone,
-                            onChanged: (value) {
-                              _additionalCountries[index]['telephone'] = value;
-                            },
-                            decoration: const InputDecoration(
-                              labelText: 'Telephone (optional)',
-                              hintText: 'e.g. 712 345 678',
-                              prefixIcon: Icon(Icons.phone),
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+              TextFormField(
+              controller: _telephoneController,
+              maxLength: 20,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+              labelText: 'Telephone (optional)',
+              prefixIcon: Icon(Icons.phone_outlined),
+              border: OutlineInputBorder(),
+              ),
+              ),
 
-                    const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
                     TextFormField(
-                      initialValue:
-                      _additionalCountries[index]['city'] ?? '',
-                      onChanged: (value) {
-                        _additionalCountries[index]['city'] = value;
-                      },
+                      controller: _cityController,
+                      maxLines: 2,
                       decoration: const InputDecoration(
-                        labelText: 'City/Town (optional)',
-                        hintText: 'e.g. Kampala',
+                        labelText: 'Physical Address (optional)',
+                        hintText: 'City, town, street, estate, building, village, etc.',
                         prefixIcon: Icon(Icons.location_city),
                         border: OutlineInputBorder(),
+                        alignLabelWithHint: true,
                       ),
                     ),
                   ],
@@ -656,19 +694,18 @@ class _BusinessProfileFormScreenState
               );
             }),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
             TextFormField(
-              controller: _aboutMeController,
-              maxLines: 5,
+              controller: _aboutUsController,
               maxLength: 1000,
+              maxLines: 5,
               decoration: const InputDecoration(
                 labelText: 'About Us (optional)',
-                hintText:
-                'Tell us about your business background, experience and expertise',
-                alignLabelWithHint: true,
-                prefixIcon: Icon(Icons.business_outlined),
+                hintText: 'Tell people about your business or organization',
+                prefixIcon: Icon(Icons.info_outline),
                 border: OutlineInputBorder(),
+                alignLabelWithHint: true,
               ),
             ),
 
@@ -715,29 +752,14 @@ class _BusinessProfileFormScreenState
 
             TextFormField(
               controller: _servicesController,
+              maxLength: 1000,
               maxLines: 4,
-              decoration: InputDecoration(
-                label: RichText(
-                  text: const TextSpan(
-                    text: 'Our Services ',
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 16,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: '*',
-                        style: TextStyle(
-                          color: Colors.red,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                hintText: 'e.g. Catering, Construction, Transport, Graphic Design',
+              decoration: const InputDecoration(
+                labelText: 'Our Services',
+                hintText: 'Describe the services your business offers',
+                prefixIcon: Icon(Icons.business_center_outlined),
+                border: OutlineInputBorder(),
                 alignLabelWithHint: true,
-                prefixIcon: const Icon(Icons.design_services_outlined),
-                border: const OutlineInputBorder(),
               ),
             ),
 
@@ -806,14 +828,16 @@ class _BusinessProfileFormScreenState
 
             TextFormField(
               controller: _websiteController,
+              maxLength: 300,
               keyboardType: TextInputType.url,
               decoration: const InputDecoration(
-                labelText: 'Website / Portfolio (optional)',
-                hintText: 'e.g. https://example.com',
+                labelText: 'Website (optional)',
+                hintText: 'https://www.example.com',
                 prefixIcon: Icon(Icons.language),
                 border: OutlineInputBorder(),
               ),
             ),
+
             const SizedBox(height: 16),
 
             OutlinedButton.icon(
@@ -872,28 +896,94 @@ class _BusinessProfileFormScreenState
                         ),
                         onChanged: (value) {
                           _additionalSocialMedia[index]['platform'] = value;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        keyboardType: TextInputType.url,
-                        decoration: const InputDecoration(
-                          labelText: 'Profile Link',
-                          hintText: 'Enter your profile link',
-                          prefixIcon: Icon(Icons.link),
-                          border: OutlineInputBorder(),
-                        ),
-                        onChanged: (value) {
-                          _additionalSocialMedia[index]['link'] = value;
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
 
-            OutlinedButton.icon(
+const SizedBox(height: 16),
+
+OutlinedButton.icon(
+onPressed: () {
+setState(() {
+_showSocialMedia = !_showSocialMedia;
+});
+},
+icon: Icon(
+_showSocialMedia ? Icons.remove : Icons.add,
+),
+label: Text(
+_showSocialMedia
+? 'Hide Social Media Links'
+: 'Add Social Media Links (Optional)',
+),
+),
+
+if (_showSocialMedia) ...[
+const SizedBox(height: 12),
+
+..._socialMedia.keys.map((platform) {
+return Padding(
+padding: const EdgeInsets.only(bottom: 12),
+child: TextFormField(
+keyboardType: TextInputType.url,
+initialValue: _socialMedia[platform] ?? '',
+maxLength: 300,
+decoration: InputDecoration(
+labelText: '$platform (Optional)',
+hintText: 'Enter your $platform profile link',
+prefixIcon: const Icon(Icons.link),
+border: const OutlineInputBorder(),
+),
+onChanged: (value) {
+_socialMedia[platform] = value;
+},
+),
+);
+}),
+],
+
+const SizedBox(height: 4),
+
+..._additionalSocialMedia.asMap().entries.map((entry) {
+final index = entry.key;
+
+return Card(
+margin: const EdgeInsets.only(bottom: 12),
+child: Padding(
+padding: const EdgeInsets.all(12),
+child: Column(
+children: [
+TextField(
+maxLength: 50,
+decoration: const InputDecoration(
+labelText: 'Platform',
+hintText: 'e.g. Threads, Pinterest, Telegram',
+prefixIcon: Icon(Icons.public),
+border: OutlineInputBorder(),
+),
+onChanged: (value) {
+_additionalSocialMedia[index]['platform'] = value;
+},
+),
+const SizedBox(height: 12),
+TextField(
+keyboardType: TextInputType.url,
+maxLength: 300,
+decoration: const InputDecoration(
+labelText: 'Profile Link',
+hintText: 'Enter your profile link',
+prefixIcon: Icon(Icons.link),
+border: OutlineInputBorder(),
+),
+onChanged: (value) {
+_additionalSocialMedia[index]['link'] = value;
+},
+),
+],
+),
+),
+);
+}),
+
+
+OutlinedButton.icon(
               onPressed: () {
                 setState(() {
                   _additionalSocialMedia.add({

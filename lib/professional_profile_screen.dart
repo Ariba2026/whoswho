@@ -395,9 +395,18 @@ child: CircularProgressIndicator(),
                   FocusNode focusNode,
                   VoidCallback onFieldSubmitted,
                   ) {
-                return TextField(
-                  controller: textEditingController,
-                  focusNode: focusNode,
+                return Focus(
+                    onFocusChange: (hasFocus) {
+                      if (!hasFocus) {
+                        textEditingController.selection =
+                            TextSelection.collapsed(
+                              offset: textEditingController.text.length,
+                            );
+                      }
+                    },
+                    child: TextField(
+                      controller: textEditingController,
+                      focusNode: focusNode,
                   onChanged: (value) {
                     _locationController.text = value;
                   },
@@ -423,6 +432,7 @@ child: CircularProgressIndicator(),
                     prefixIcon: const Icon(Icons.public),
                     border: const OutlineInputBorder(),
                   ),
+                    ),
                 );
               },
             ),
@@ -458,16 +468,21 @@ child: CircularProgressIndicator(),
                 ),
               ],
             ),
+
             const SizedBox(height: 16),
 
             TextFormField(
               controller: _cityController,
+              maxLines: 2,
               decoration: const InputDecoration(
-                labelText: 'City/Town (optional)',
+                labelText: 'Physical Address (optional)',
+                hintText: 'City, town, street, estate, building, village, etc.',
                 prefixIcon: Icon(Icons.location_city),
                 border: OutlineInputBorder(),
+                alignLabelWithHint: true,
               ),
             ),
+
 
             const SizedBox(height: 16),
 
@@ -508,19 +523,23 @@ child: CircularProgressIndicator(),
                       decoration: InputDecoration(
                         label: RichText(
                           text: TextSpan(
-                            text: 'Profession ${index + 1} ',
+                            text: index == 0
+                                ? 'Profession 1 '
+                                : 'Profession ${index + 1} (Optional) ',
                             style: const TextStyle(
                               color: Colors.black87,
                               fontSize: 16,
                             ),
-                            children: const [
+                            children: index == 0
+                                ? const [
                               TextSpan(
                                 text: '*',
                                 style: TextStyle(
                                   color: Colors.red,
                                 ),
                               ),
-                            ],
+                            ]
+                                : const [],
                           ),
                         ),
                         prefixIcon: const Icon(Icons.work_outline),
@@ -716,19 +735,17 @@ child: CircularProgressIndicator(),
                       ],
                     ),
 
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     TextFormField(
-                      initialValue:
-                      _additionalCountries[index]['city'] ?? '',
-                      onChanged: (value) {
-                        _additionalCountries[index]['city'] = value;
-                      },
+                      controller: _cityController,
+                      maxLines: 2,
                       decoration: const InputDecoration(
-                        labelText: 'City/Town (optional)',
-                        hintText: 'e.g. Kampala',
+                        labelText: 'Physical Address (optional)',
+                        hintText: 'City, town, street, estate, building, village, etc.',
                         prefixIcon: Icon(Icons.location_city),
                         border: OutlineInputBorder(),
+                        alignLabelWithHint: true,
                       ),
                     ),
                   ],
