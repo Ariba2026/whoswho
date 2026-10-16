@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'departments.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'countries.dart';
 import 'business_type.dart';
-import 'industries.dart';
 
 class BusinessProfileFormScreen extends StatefulWidget {
   const BusinessProfileFormScreen({super.key});
@@ -15,35 +15,36 @@ class BusinessProfileFormScreen extends StatefulWidget {
 
 class _BusinessProfileFormScreenState
     extends State<BusinessProfileFormScreen> {
-  String? _businessType;
-  String? _industry;
   final TextEditingController _businessNameController =
   TextEditingController();
   final TextEditingController _telephoneController =
   TextEditingController();
-  final TextEditingController _cityController =
+  final TextEditingController _whatsAppController =
+  TextEditingController();
+  final TextEditingController _physicalAddressController =
   TextEditingController();
   final TextEditingController _countryCodeController =
   TextEditingController();
   final TextEditingController _emailController =
   TextEditingController();
-  final TextEditingController _locationController =
+  final TextEditingController _industryController =
   TextEditingController();
-  final TextEditingController _aboutMeController =
+  final TextEditingController _aboutUsController =
   TextEditingController();
   final TextEditingController _servicesController =
-  TextEditingController();
-  final TextEditingController _educationController =
   TextEditingController();
   final TextEditingController _websiteController =
   TextEditingController();
   final TextEditingController _languagesController =
   TextEditingController();
 
-  final List<Map<String, String>> _additionalCountries = [];
-  String? _yearsOfExperience;
+  String? _businessCategory;
   String? _availability;
   String _countryTelephoneCode = '';
+  String _country = '';
+
+  final List<Map<String, String>> _additionalCountries = [];
+
   bool _showSocialMedia = false;
   bool _isLoadingProfile = true;
 
@@ -62,12 +63,12 @@ class _BusinessProfileFormScreenState
   void dispose() {
     _businessNameController.dispose();
     _telephoneController.dispose();
+    _physicalAddressController.dispose();
+    _countryCodeController.dispose();
     _emailController.dispose();
-    _locationController.dispose();
-    _aboutMeController.dispose();
+    _industryController.dispose();
+    _aboutUsController.dispose();
     _servicesController.dispose();
-    _cityController.dispose();
-    _educationController.dispose();
     _websiteController.dispose();
     _languagesController.dispose();
     super.dispose();
@@ -93,24 +94,25 @@ class _BusinessProfileFormScreenState
       final profile = data?['businessProfile'];
 
       if (profile is Map<String, dynamic>) {
+        _businessCategory = profile['businessCategory'];
         _businessNameController.text = profile['businessName'] ?? '';
-        _businessType = profile['businessType'];
-        _industry = profile['industry'];
+        _industryController.text = profile['industry'] ?? '';
         _telephoneController.text = profile['telephone'] ?? '';
-        _cityController.text = profile['city'] ?? '';
+        _whatsAppController.text = profile['whatsApp']?.toString() ?? '';
+        _physicalAddressController.text =
+            profile['physicalAddress'] ?? '';
         _emailController.text = profile['email'] ?? '';
-        _locationController.text = profile['country'] ?? '';
-        _countryTelephoneCode =
-            countryTelephoneCodes[_locationController.text] ?? '';
-        _countryCodeController.text = _countryTelephoneCode;
-        _aboutMeController.text = profile['aboutMe'] ?? '';
-        _servicesController.text = profile['services'] ?? '';
-        _educationController.text = profile['education'] ?? '';
-        _websiteController.text = profile['website'] ?? '';
-        _languagesController.text = profile['languages'] ?? '';
 
-        _yearsOfExperience = profile['yearsOfExperience'];
+        _country = profile['country'] ?? '';
+
+        _countryTelephoneCode = countryTelephoneCodes[_country] ?? '';
+        _countryCodeController.text = _countryTelephoneCode;
+
+        _servicesController.text = profile['services'] ?? '';
         _availability = profile['availability'];
+        _languagesController.text = profile['languages'] ?? '';
+        _aboutUsController.text = profile['aboutUs'] ?? '';
+        _websiteController.text = profile['website'] ?? '';
 
         final additionalCountries =
         profile['additionalCountries'];
@@ -124,18 +126,19 @@ class _BusinessProfileFormScreenState
               ),
             );
         }
-        debugPrint('LOADED ADDITIONAL COUNTRIES: $_additionalCountries');
 
         final socialMedia = profile['socialMedia'];
-        debugPrint('LOADED SOCIAL MEDIA: $socialMedia');
+
         if (socialMedia is Map) {
           _socialMedia.forEach((platform, _) {
             _socialMedia[platform] =
                 socialMedia[platform]?.toString() ?? '';
           });
         }
+
         final additionalSocialMedia =
         profile['additionalSocialMedia'];
+
         if (additionalSocialMedia is List) {
           _additionalSocialMedia
             ..clear()
@@ -145,17 +148,16 @@ class _BusinessProfileFormScreenState
               ),
             );
         }
+
         final hasSocialMedia = _socialMedia.values.any(
               (value) => value.trim().isNotEmpty,
         );
 
-        _showSocialMedia = hasSocialMedia ||
-            _additionalSocialMedia.isNotEmpty;
+        _showSocialMedia =
+            hasSocialMedia || _additionalSocialMedia.isNotEmpty;
       }
     } catch (e) {
-      debugPrint(
-        'Failed to load business profile: $e',
-      );
+      debugPrint('Failed to load business profile: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -165,8 +167,8 @@ class _BusinessProfileFormScreenState
                 (value) => value.trim().isNotEmpty,
           );
 
-          _showSocialMedia = hasSocialMedia ||
-              _additionalSocialMedia.isNotEmpty;
+          _showSocialMedia =
+              hasSocialMedia || _additionalSocialMedia.isNotEmpty;
         });
       }
     }
@@ -184,8 +186,11 @@ class _BusinessProfileFormScreenState
       return;
     }
 
-    if (_businessNameController.text.trim().isEmpty ||
-        _locationController.text.trim().isEmpty ||
+    if (_businessCategory == null ||
+        _businessCategory!.trim().isEmpty ||
+        _industryController.text.trim().isEmpty ||
+        _businessNameController.text.trim().isEmpty ||
+        _country.trim().isEmpty ||
         _servicesController.text.trim().isEmpty ||
         _availability == null ||
         _languagesController.text.trim().isEmpty) {
@@ -200,31 +205,39 @@ class _BusinessProfileFormScreenState
     }
 
     final profileData = {
-      'businessType': _businessType,
-      'industry': _industry,
+      'businessCategory': _businessCategory,
+      'industry': _industryController.text.trim(),
       'businessName': _businessNameController.text.trim(),
+      'country': _country,
       'telephone': _telephoneController.text.trim(),
-      'city': _cityController.text.trim(),
+      'whatsApp': _whatsAppController.text.trim(),
+      'physicalAddress': _physicalAddressController.text.trim(),
       'email': _emailController.text.trim(),
+      'services': _servicesController.text.trim(),
+      'availability': _availability,
+      'languages': _languagesController.text.trim(),
+      'aboutUs': _aboutUsController.text.trim(),
+      'website': _websiteController.text.trim(),
+      'additionalCountries': _additionalCountries,
       'socialMedia': _socialMedia,
       'additionalSocialMedia': _additionalSocialMedia,
-      'services': _servicesController.text.trim(),
-      'country': _locationController.text.trim(),
-      'additionalCountries': _additionalCountries,
-      'aboutMe': _aboutMeController.text.trim(),
-      'yearsOfExperience': _yearsOfExperience,
-      'availability': _availability,
-      'education': _educationController.text.trim(),
-      'website': _websiteController.text.trim(),
-      'languages': _languagesController.text.trim(),
     };
+
     try {
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .set({
-
         'businessProfile': profileData,
+      }, SetOptions(merge: true));
+      await FirebaseFirestore.instance
+          .collection('publicProfiles')
+          .doc(user.uid)
+          .set({
+        'accountType': 'Business',
+        'fullName': profileData['businessName'],
+        'businessProfile': profileData,
+        'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
       if (!mounted) return;
@@ -244,11 +257,13 @@ class _BusinessProfileFormScreenState
       );
     }
   }
+
   @override
   void initState() {
     super.initState();
     _loadProfile();
   }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoadingProfile) {
@@ -258,6 +273,7 @@ class _BusinessProfileFormScreenState
         ),
       );
     }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Business Profile'),
@@ -268,7 +284,7 @@ class _BusinessProfileFormScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'business Information',
+              'Business Information',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -278,111 +294,120 @@ class _BusinessProfileFormScreenState
             const SizedBox(height: 8),
 
             const Text(
-              'Complete your business profile so people can discover your business.',
+              'Complete your business profile so people can discover your business and services.',
             ),
 
             const SizedBox(height: 24),
 
+            // BUSINESS CATEGORY
+            DropdownButtonFormField<String>(
+              value: _businessCategory,
+              decoration: InputDecoration(
+                label: RichText(
+                  text: const TextSpan(
+                    text: 'Business Category ',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 16,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: '*',
+                        style: TextStyle(
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                prefixIcon: const Icon(Icons.business_outlined),
+                border: const OutlineInputBorder(),
+              ),
+              items: businessTypes.map((type) {
+                return DropdownMenuItem<String>(
+                  value: type,
+                  child: Text(type),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _businessCategory = value;
+                });
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            // INDUSTRY
             Autocomplete<String>(
               initialValue: TextEditingValue(
-                text: _businessType ?? '',
+                text: _industryController.text,
               ),
-              optionsBuilder: (TextEditingValue textEditingValue) {
+              optionsBuilder:
+                  (TextEditingValue textEditingValue) {
                 if (textEditingValue.text.isEmpty) {
-                  return businessTypes;
+                  return departments;
                 }
 
-                return businessTypes.where((type) {
-                return type.toLowerCase().contains(
-                textEditingValue.text.toLowerCase(),
+                return departments.where(
+                      (industry) =>
+                      industry.toLowerCase().contains(
+                        textEditingValue.text.toLowerCase(),
+                      ),
                 );
-                });
-
               },
-              onSelected: (value) {
-                setState(() {
-                  _businessType = value;
-                });
+              onSelected: (String selection) {
+                _industryController.text = selection;
               },
               fieldViewBuilder: (
-                  context,
-                  textEditingController,
-                  focusNode,
-                  onFieldSubmitted,
+                  BuildContext context,
+                  TextEditingController textEditingController,
+                  FocusNode focusNode,
+                  VoidCallback onFieldSubmitted,
                   ) {
-                return TextFormField(
+                if (textEditingController.text !=
+                    _industryController.text) {
+                  textEditingController.text =
+                      _industryController.text;
+                }
+
+                return TextField(
                   controller: textEditingController,
                   focusNode: focusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'Business Category (optional)',
-                    hintText: 'Type to search business categories',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.business),
-                    suffixIcon: Icon(Icons.arrow_drop_down),
-                  ),
                   onChanged: (value) {
-                    setState(() {
-                      _businessType = businessTypes.contains(value)
-                          ? value
-                          : null;
-                    });
+                    _industryController.text = value;
                   },
+                  decoration: InputDecoration(
+                    label: RichText(
+                      text: const TextSpan(
+                        text: 'Industry ',
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 16,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: '*',
+                            style: TextStyle(
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    hintText: 'Type to search industry',
+                    prefixIcon:
+                    const Icon(Icons.account_tree_outlined),
+                    border: const OutlineInputBorder(),
+                  ),
                 );
               },
             ),
 
             const SizedBox(height: 16),
 
-            Autocomplete<String>(
-              initialValue: TextEditingValue(
-                text: _industry ?? '',
-              ),
-              optionsBuilder: (TextEditingValue textEditingValue) {
-                if (textEditingValue.text.isEmpty) {
-                  return industries;
-                }
-
-                return industries.where((industry) {
-                return industry.toLowerCase().contains(
-                textEditingValue.text.toLowerCase(),
-                );
-                });
-              },
-              onSelected: (value) {
-                setState(() {
-                  _industry = value;
-                });
-              },
-              fieldViewBuilder: (
-                  context,
-                  textEditingController,
-                  focusNode,
-                  onFieldSubmitted,
-                  ) {
-                return TextFormField(
-                  controller: textEditingController,
-                  focusNode: focusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'Industry (optional)',
-                    hintText: 'Type to search industries',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.factory_outlined),
-                    suffixIcon: Icon(Icons.arrow_drop_down),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _industry = industries.contains(value)
-                          ? value
-                          : null;
-                    });
-                  },
-                );
-              },
-            ),
-
-            const SizedBox(height: 16),
-
-            TextField(
+            // BUSINESS NAME
+            TextFormField(
               controller: _businessNameController,
               maxLength: 150,
               decoration: InputDecoration(
@@ -403,35 +428,41 @@ class _BusinessProfileFormScreenState
                     ],
                   ),
                 ),
-                prefixIcon: const Icon(Icons.person_outline),
+                hintText: 'Enter your business name',
+                prefixIcon: const Icon(Icons.business),
                 border: const OutlineInputBorder(),
               ),
             ),
 
-
             const SizedBox(height: 16),
 
+            // COUNTRY
             Autocomplete<String>(
               initialValue: TextEditingValue(
-                text: _locationController.text,
+                text: _country,
               ),
-              optionsBuilder: (TextEditingValue textEditingValue) {
+              optionsBuilder:
+                  (TextEditingValue textEditingValue) {
                 if (textEditingValue.text.isEmpty) {
                   return countries;
                 }
 
                 return countries.where(
-                      (country) => country.toLowerCase().contains(
-                    textEditingValue.text.toLowerCase(),
-                  ),
+                      (country) =>
+                      country.toLowerCase().contains(
+                        textEditingValue.text.toLowerCase(),
+                      ),
                 );
               },
               onSelected: (String selection) {
                 setState(() {
-                  _locationController.text = selection;
+                  _country = selection;
+
                   _countryTelephoneCode =
                       countryTelephoneCodes[selection] ?? '';
-                  _countryCodeController.text = _countryTelephoneCode;
+
+                  _countryCodeController.text =
+                      _countryTelephoneCode;
                 });
               },
               fieldViewBuilder: (
@@ -440,11 +471,15 @@ class _BusinessProfileFormScreenState
                   FocusNode focusNode,
                   VoidCallback onFieldSubmitted,
                   ) {
+                if (textEditingController.text != _country) {
+                  textEditingController.text = _country;
+                }
+
                 return TextField(
                   controller: textEditingController,
                   focusNode: focusNode,
                   onChanged: (value) {
-                    _locationController.text = value;
+                    _country = value;
                   },
                   decoration: InputDecoration(
                     label: RichText(
@@ -471,8 +506,10 @@ class _BusinessProfileFormScreenState
                 );
               },
             ),
+
             const SizedBox(height: 16),
 
+            // TELEPHONE
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -489,9 +526,11 @@ class _BusinessProfileFormScreenState
                 ),
 
                 const SizedBox(width: 8),
+
                 Expanded(
                   child: TextFormField(
                     controller: _telephoneController,
+                    maxLength: 20,
                     keyboardType: TextInputType.phone,
                     decoration: const InputDecoration(
                       labelText: 'Telephone (optional)',
@@ -504,15 +543,52 @@ class _BusinessProfileFormScreenState
               ],
             ),
 
+            const SizedBox(height: 12),
+
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 85,
+                  child: TextFormField(
+                    readOnly: true,
+                    controller: TextEditingController(
+                      text: _countryTelephoneCode,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Code',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextFormField(
+                    controller: _whatsAppController,
+                    maxLength: 25,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'WhatsApp Number (optional)',
+                      hintText: 'e.g. 712 345 678',
+                      prefixIcon: Icon(Icons.chat),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
             const SizedBox(height: 16),
 
+            // PHYSICAL ADDRESS
             TextFormField(
-              controller: _cityController,
-              maxLines: 2,
+              controller: _physicalAddressController,
               maxLength: 300,
+              maxLines: 3,
               decoration: const InputDecoration(
                 labelText: 'Physical Address (optional)',
-                hintText: 'City, town, street, estate, building, village, etc.',
+                hintText:
+                'City, town, street, estate, building, village, etc.',
                 prefixIcon: Icon(Icons.location_city),
                 border: OutlineInputBorder(),
                 alignLabelWithHint: true,
@@ -521,250 +597,56 @@ class _BusinessProfileFormScreenState
 
             const SizedBox(height: 16),
 
+            // EMAIL
             TextFormField(
               controller: _emailController,
               maxLength: 254,
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
                 labelText: 'Email (optional)',
+                hintText: 'e.g. business@example.com',
                 prefixIcon: Icon(Icons.email_outlined),
                 border: OutlineInputBorder(),
               ),
             ),
 
-
-            const SizedBox(height: 8),
-
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _additionalCountries.add({
-                      'country': '',
-                      'telephone': '',
-                      'city': '',
-                    });
-                  });
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Branches in Other Countries (optional)'),
-              ),
-            ),
-
-..._additionalCountries.asMap().entries.map((entry) {
-final index = entry.key;
-
-return Padding(
-padding: const EdgeInsets.only(top: 12),
-child: Column(
-children: [
-Autocomplete<String>(
-initialValue: TextEditingValue(
-text: _additionalCountries[index]['country'] ?? '',
-),
-optionsBuilder: (textEditingValue) {
-if (textEditingValue.text.isEmpty) {
-return countries;
-}
-
-return countries.where(
-(country) => country.toLowerCase().contains(
-textEditingValue.text.toLowerCase(),
-),
-);
-},
-onSelected: (selection) {
-setState(() {
-_additionalCountries[index]['country'] = selection;
-});
-},
-fieldViewBuilder: (
-context,
-textEditingController,
-focusNode,
-onFieldSubmitted,
-) {
-return TextField(
-controller: textEditingController,
-focusNode: focusNode,
-onChanged: (value) {
-_additionalCountries[index]['country'] = value;
-},
-decoration: const InputDecoration(
-labelText: 'Additional Country',
-hintText: 'Type to search country',
-prefixIcon: Icon(Icons.public),
-border: OutlineInputBorder(),
-),
-);
-},
-),
-
-const SizedBox(height: 12),
-
-TextFormField(
-initialValue:
-_additionalCountries[index]['telephone'] ?? '',
-maxLength: 20,
-keyboardType: TextInputType.phone,
-decoration: const InputDecoration(
-labelText: 'Branch Telephone (optional)',
-prefixIcon: Icon(Icons.phone_outlined),
-border: OutlineInputBorder(),
-),
-onChanged: (value) {
-_additionalCountries[index]['telephone'] = value;
-},
-),
-
-const SizedBox(height: 12),
-
-TextFormField(
-initialValue: _additionalCountries[index]['city'] ?? '',
-maxLength: 300,
-maxLines: 2,
-decoration: const InputDecoration(
-labelText: 'Branch Physical Address (optional)',
-hintText: 'City, town, street, estate, building, etc.',
-prefixIcon: Icon(Icons.location_city),
-border: OutlineInputBorder(),
-alignLabelWithHint: true,
-),
-onChanged: (value) {
-_additionalCountries[index]['city'] = value;
-},
-),
-],
-),
-);
-}),
-
-
-const SizedBox(height: 12),
-
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: 85,
-                          child: TextFormField(
-                            readOnly: true,
-                            controller: TextEditingController(
-                              text: countryTelephoneCodes[
-                              _additionalCountries[index]['country']
-                              ] ??
-                                  '',
-                            ),
-                            decoration: const InputDecoration(
-                              labelText: 'Code',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                        ),
-
-              const SizedBox(height: 16),
-
-              TextFormField(
-              controller: _telephoneController,
-              maxLength: 20,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-              labelText: 'Telephone (optional)',
-              prefixIcon: Icon(Icons.phone_outlined),
-              border: OutlineInputBorder(),
-              ),
-              ),
-
-              const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _cityController,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'Physical Address (optional)',
-                        hintText: 'City, town, street, estate, building, village, etc.',
-                        prefixIcon: Icon(Icons.location_city),
-                        border: OutlineInputBorder(),
-                        alignLabelWithHint: true,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-
             const SizedBox(height: 16),
 
-            TextFormField(
-              controller: _aboutUsController,
-              maxLength: 1000,
-              maxLines: 5,
-              decoration: const InputDecoration(
-                labelText: 'About Us (optional)',
-                hintText: 'Tell people about your business or organization',
-                prefixIcon: Icon(Icons.info_outline),
-                border: OutlineInputBorder(),
-                alignLabelWithHint: true,
-              ),
-            ),
-
-
-            const SizedBox(height: 16),
-
-            DropdownButtonFormField<String>(
-              initialValue: _yearsOfExperience,
-              decoration: const InputDecoration(
-                labelText: 'Years in Operation (optional)',
-                prefixIcon: Icon(Icons.business_center_outlined),
-                border: OutlineInputBorder(),
-              ),
-              items: const [
-                DropdownMenuItem(
-                  value: 'Less than 1 year',
-                  child: Text('Less than 1 year'),
-                ),
-                DropdownMenuItem(
-                  value: '1–3 years',
-                  child: Text('1–3 years'),
-                ),
-                DropdownMenuItem(
-                  value: '4–7 years',
-                  child: Text('4–7 years'),
-                ),
-                DropdownMenuItem(
-                  value: '8–15 years',
-                  child: Text('8–15 years'),
-                ),
-                DropdownMenuItem(
-                  value: '15+ years',
-                  child: Text('15+ years'),
-                ),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _yearsOfExperience = value;
-                });
-              },
-            ),
-
-            const SizedBox(height: 16),
-
+            // OUR SERVICES
             TextFormField(
               controller: _servicesController,
               maxLength: 1000,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Our Services',
-                hintText: 'Describe the services your business offers',
-                prefixIcon: Icon(Icons.business_center_outlined),
-                border: OutlineInputBorder(),
+              maxLines: 5,
+              decoration: InputDecoration(
+                label: RichText(
+                  text: const TextSpan(
+                    text: 'Our Services ',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 16,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: '*',
+                        style: TextStyle(
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                hintText:
+                'Describe the services your business provides',
                 alignLabelWithHint: true,
+                prefixIcon:
+                const Icon(Icons.design_services_outlined),
+                border: const OutlineInputBorder(),
               ),
             ),
 
             const SizedBox(height: 16),
 
+            // AVAILABILITY
             DropdownButtonFormField<String>(
               value: _availability,
               decoration: InputDecoration(
@@ -811,195 +693,10 @@ const SizedBox(height: 12),
 
             const SizedBox(height: 16),
 
-            TextFormField(
-              controller: _educationController,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Business Registration & Accreditation (optional)',
-                hintText:
-                'e.g. Registration number, accrediting body, business licence details',
-                alignLabelWithHint: true,
-                prefixIcon: Icon(Icons.verified_outlined),
-                border: OutlineInputBorder(),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _websiteController,
-              maxLength: 300,
-              keyboardType: TextInputType.url,
-              decoration: const InputDecoration(
-                labelText: 'Website (optional)',
-                hintText: 'https://www.example.com',
-                prefixIcon: Icon(Icons.language),
-                border: OutlineInputBorder(),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            OutlinedButton.icon(
-              onPressed: () {
-                setState(() {
-                  _showSocialMedia = !_showSocialMedia;
-                });
-              },
-              icon: Icon(
-                _showSocialMedia ? Icons.remove : Icons.add,
-              ),
-              label: Text(
-                _showSocialMedia
-                    ? 'Hide Social Media Links'
-                    : 'Add Social Media Links (Optional)',
-              ),
-            ),
-            if (_showSocialMedia) ...[
-              const SizedBox(height: 12),
-
-              ..._socialMedia.keys.map((platform) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: TextFormField(
-                    keyboardType: TextInputType.url,
-                    initialValue: _socialMedia[platform] ?? '',
-                    decoration: InputDecoration(
-                      labelText: '$platform (Optional)',
-                      hintText: 'Enter your $platform profile link',
-                      prefixIcon: const Icon(Icons.link),
-                      border: const OutlineInputBorder(),
-                    ),
-                    onChanged: (value) {
-                      _socialMedia[platform] = value;
-                    },
-                  ),
-                );
-              }),
-            ],
-            const SizedBox(height: 4),
-            ..._additionalSocialMedia.asMap().entries.map((entry) {
-              final index = entry.key;
-
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    children: [
-                      TextField(
-                        decoration: const InputDecoration(
-                          labelText: 'Platform',
-                          hintText: 'e.g. Threads, Pinterest, Telegram',
-                          prefixIcon: Icon(Icons.public),
-                          border: OutlineInputBorder(),
-                        ),
-                        onChanged: (value) {
-                          _additionalSocialMedia[index]['platform'] = value;
-
-const SizedBox(height: 16),
-
-OutlinedButton.icon(
-onPressed: () {
-setState(() {
-_showSocialMedia = !_showSocialMedia;
-});
-},
-icon: Icon(
-_showSocialMedia ? Icons.remove : Icons.add,
-),
-label: Text(
-_showSocialMedia
-? 'Hide Social Media Links'
-: 'Add Social Media Links (Optional)',
-),
-),
-
-if (_showSocialMedia) ...[
-const SizedBox(height: 12),
-
-..._socialMedia.keys.map((platform) {
-return Padding(
-padding: const EdgeInsets.only(bottom: 12),
-child: TextFormField(
-keyboardType: TextInputType.url,
-initialValue: _socialMedia[platform] ?? '',
-maxLength: 300,
-decoration: InputDecoration(
-labelText: '$platform (Optional)',
-hintText: 'Enter your $platform profile link',
-prefixIcon: const Icon(Icons.link),
-border: const OutlineInputBorder(),
-),
-onChanged: (value) {
-_socialMedia[platform] = value;
-},
-),
-);
-}),
-],
-
-const SizedBox(height: 4),
-
-..._additionalSocialMedia.asMap().entries.map((entry) {
-final index = entry.key;
-
-return Card(
-margin: const EdgeInsets.only(bottom: 12),
-child: Padding(
-padding: const EdgeInsets.all(12),
-child: Column(
-children: [
-TextField(
-maxLength: 50,
-decoration: const InputDecoration(
-labelText: 'Platform',
-hintText: 'e.g. Threads, Pinterest, Telegram',
-prefixIcon: Icon(Icons.public),
-border: OutlineInputBorder(),
-),
-onChanged: (value) {
-_additionalSocialMedia[index]['platform'] = value;
-},
-),
-const SizedBox(height: 12),
-TextField(
-keyboardType: TextInputType.url,
-maxLength: 300,
-decoration: const InputDecoration(
-labelText: 'Profile Link',
-hintText: 'Enter your profile link',
-prefixIcon: Icon(Icons.link),
-border: OutlineInputBorder(),
-),
-onChanged: (value) {
-_additionalSocialMedia[index]['link'] = value;
-},
-),
-],
-),
-),
-);
-}),
-
-
-OutlinedButton.icon(
-              onPressed: () {
-                setState(() {
-                  _additionalSocialMedia.add({
-                    'platform': '',
-                    'link': '',
-                  });
-                });
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Add Social Media'),
-            ),
-
-            const SizedBox(height: 16),
-
+            // LANGUAGES
             TextFormField(
               controller: _languagesController,
+              maxLength: 50,
               maxLines: 2,
               decoration: InputDecoration(
                 label: RichText(
@@ -1026,8 +723,352 @@ OutlinedButton.icon(
               ),
             ),
 
+            const SizedBox(height: 16),
+
+            // ABOUT US
+            TextFormField(
+              controller: _aboutUsController,
+              maxLength: 1000,
+              maxLines: 6,
+              decoration: const InputDecoration(
+                labelText: 'About Us (optional)',
+                hintText:
+                'Tell us about your business, background, experience, and what your business offers.',
+                alignLabelWithHint: true,
+                prefixIcon: Icon(Icons.business_outlined),
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // WEBSITE
+            TextFormField(
+              controller: _websiteController,
+              maxLength: 300,
+              keyboardType: TextInputType.url,
+              decoration: const InputDecoration(
+                labelText: 'Website (optional)',
+                hintText: 'e.g. https://example.com',
+                prefixIcon: Icon(Icons.language),
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // ADDITIONAL COUNTRIES / BRANCHES
+            const Text(
+              'Branches in Other Countries',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            const Text(
+              'Add countries where your business has branches or operates.',
+            ),
+
+            const SizedBox(height: 12),
+
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _additionalCountries.add({
+                      'country': '',
+                      'telephone': '',
+                      'city': '',
+                    });
+                  });
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Add Country / Branch'),
+              ),
+            ),
+
+            ..._additionalCountries.asMap().entries.map((entry) {
+              final index = entry.key;
+
+              return Card(
+                margin: const EdgeInsets.only(top: 12),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    children: [
+                      Autocomplete<String>(
+                        initialValue: TextEditingValue(
+                          text: _additionalCountries[index]
+                          ['country'] ??
+                              '',
+                        ),
+                        optionsBuilder:
+                            (TextEditingValue textEditingValue) {
+                          if (textEditingValue.text.isEmpty) {
+                            return countries;
+                          }
+
+                          return countries.where(
+                                (country) =>
+                                country.toLowerCase().contains(
+                                  textEditingValue.text
+                                      .toLowerCase(),
+                                ),
+                          );
+                        },
+                        onSelected: (String selection) {
+                          setState(() {
+                            _additionalCountries[index]
+                            ['country'] = selection;
+                          });
+                        },
+                        fieldViewBuilder: (
+                            BuildContext context,
+                            TextEditingController
+                            textEditingController,
+                            FocusNode focusNode,
+                            VoidCallback onFieldSubmitted,
+                            ) {
+                          return TextField(
+                            controller: textEditingController,
+                            focusNode: focusNode,
+                            onChanged: (value) {
+                              _additionalCountries[index]
+                              ['country'] = value;
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Country',
+                              hintText:
+                              'Type to search country',
+                              prefixIcon:
+                              Icon(Icons.public),
+                              border: OutlineInputBorder(),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      Row(
+                        crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 85,
+                            child: TextFormField(
+                              readOnly: true,
+                              controller:
+                              TextEditingController(
+                                text: countryTelephoneCodes[
+                                _additionalCountries[index]
+                                ['country']] ??
+                                    '',
+                              ),
+                              decoration:
+                              const InputDecoration(
+                                labelText: 'Code',
+                                border:
+                                OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(width: 8),
+
+                          Expanded(
+                            child: TextFormField(
+                              initialValue:
+                              _additionalCountries[index]
+                              ['telephone'] ??
+                                  '',
+                              maxLength: 20,
+                              keyboardType:
+                              TextInputType.phone,
+                              onChanged: (value) {
+                                _additionalCountries[index]
+                                ['telephone'] = value;
+                              },
+                              decoration:
+                              const InputDecoration(
+                                labelText:
+                                'Telephone (optional)',
+                                hintText:
+                                'e.g. 712 345 678',
+                                prefixIcon:
+                                Icon(Icons.phone),
+                                border:
+                                OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      TextFormField(
+                        initialValue:
+                        _additionalCountries[index]['city'] ??
+                            '',
+                        maxLength: 300,
+                        maxLines: 2,
+                        onChanged: (value) {
+                          _additionalCountries[index]['city'] =
+                              value;
+                        },
+                        decoration: const InputDecoration(
+                          labelText:
+                          'Physical Address (optional)',
+                          hintText:
+                          'City, town, street, estate, building, village, etc.',
+                          prefixIcon:
+                          Icon(Icons.location_city),
+                          border: OutlineInputBorder(),
+                          alignLabelWithHint: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+
+            const SizedBox(height: 28),
+
+            // SOCIAL MEDIA
+            OutlinedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _showSocialMedia = !_showSocialMedia;
+                });
+              },
+              icon: Icon(
+                _showSocialMedia
+                    ? Icons.remove
+                    : Icons.add,
+              ),
+              label: Text(
+                _showSocialMedia
+                    ? 'Hide Social Media Links'
+                    : 'Add Social Media Links (Optional)',
+              ),
+            ),
+
+            if (_showSocialMedia) ...[
+              const SizedBox(height: 12),
+
+              ..._socialMedia.keys.map((platform) {
+                return Padding(
+                  padding:
+                  const EdgeInsets.only(bottom: 12),
+                  child: TextFormField(
+                    initialValue:
+                    _socialMedia[platform] ?? '',
+                    maxLength: 300,
+                    keyboardType: TextInputType.url,
+                    decoration: InputDecoration(
+                      labelText: '$platform (Optional)',
+                      hintText:
+                      'Enter your $platform business link',
+                      prefixIcon:
+                      const Icon(Icons.link),
+                      border:
+                      const OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      _socialMedia[platform] = value;
+                    },
+                  ),
+                );
+              }),
+
+              const SizedBox(height: 4),
+
+              ..._additionalSocialMedia
+                  .asMap()
+                  .entries
+                  .map((entry) {
+                final index = entry.key;
+
+                return Card(
+                  margin:
+                  const EdgeInsets.only(bottom: 12),
+                  child: Padding(
+                    padding:
+                    const EdgeInsets.all(12),
+                    child: Column(
+                      children: [
+                        TextField(
+                          maxLength: 50,
+                          decoration:
+                          const InputDecoration(
+                            labelText: 'Platform',
+                            hintText:
+                            'e.g. Threads, Pinterest, Telegram',
+                            prefixIcon:
+                            Icon(Icons.public),
+                            border:
+                            OutlineInputBorder(),
+                          ),
+                          onChanged: (value) {
+                            _additionalSocialMedia[
+                            index]['platform'] =
+                                value;
+                          },
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        TextField(
+                          maxLength: 300,
+                          keyboardType:
+                          TextInputType.url,
+                          decoration:
+                          const InputDecoration(
+                            labelText:
+                            'Profile Link',
+                            hintText:
+                            'Enter your business profile link',
+                            prefixIcon:
+                            Icon(Icons.link),
+                            border:
+                            OutlineInputBorder(),
+                          ),
+                          onChanged: (value) {
+                            _additionalSocialMedia[
+                            index]['link'] =
+                                value;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+
+              OutlinedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _additionalSocialMedia.add({
+                      'platform': '',
+                      'link': '',
+                    });
+                  });
+                },
+                icon: const Icon(Icons.add),
+                label:
+                const Text('Add Social Media'),
+              ),
+            ],
+
             const SizedBox(height: 32),
 
+            // SAVE
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(

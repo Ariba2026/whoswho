@@ -130,10 +130,11 @@ class _WelcomePageState extends State<WelcomePage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const SignInScreen(),
+                        builder: (context) => const DirectoryScreen(),
                       ),
                     );
                   },
+
                   icon: const Icon(Icons.explore_outlined),
                   label: const Text(
                     'Browse Directory',
@@ -378,6 +379,7 @@ class Professional {
   final String country;
   final String region;
   final String city;
+  final String address;
   final String availability;
   final String phone;
   final double rating;
@@ -393,6 +395,7 @@ class Professional {
     required this.country,
     required this.region,
     required this.city,
+    this.address = '',
     required this.availability,
     required this.phone,
     required this.rating,
@@ -408,6 +411,7 @@ class Business {
   final String country;
   final String region;
   final String city;
+  final String address;
   final String availability;
   final String phone;
   final double rating;
@@ -422,6 +426,7 @@ class Business {
     required this.country,
     required this.region,
     required this.city,
+    this.address = '',
     required this.availability,
     required this.phone,
     required this.rating,
@@ -582,14 +587,113 @@ class _ProfessionalsDirectoryScreenState
   final TextEditingController locationController = TextEditingController();
 
   List<Professional> searchResults = [];
+  bool _isLoading = false;
+  String? _loadError;
+  List<Professional> _allProfessionals = [];
 
   bool hasSearched = false;
+  @override
+  void initState() {
+    super.initState();
+    _loadProfessionals();
+  }
+
+  Future<void> _loadProfessionals() async {
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('publicProfiles')
+          .where('accountType', isEqualTo: 'Professional')
+          .get();
+
+      final professionals = snapshot.docs.map((doc) {
+        final data = doc.data();
+        final rawProfile = data['professionalProfile'];
+
+        final Map<String, dynamic> profile =
+        rawProfile is Map<String, dynamic>
+            ? rawProfile
+            : <String, dynamic>{};
+
+        String readText(dynamic value) {
+          return value == null ? '' : value.toString().trim();
+        }
+
+        List<String> readList(dynamic value) {
+          if (value is List) {
+            return value
+                .map((item) => item.toString().trim())
+                .where((item) => item.isNotEmpty)
+                .toList();
+          }
+
+          if (value is String && value.trim().isNotEmpty) {
+            return value
+                .split(RegExp(r'[,;\n]'))
+                .map((item) => item.trim())
+                .where((item) => item.isNotEmpty)
+                .toList();
+          }
+
+          return [];
+        }
+
+        final professions = readList(profile['professions']);
+        final profileName = readText(profile['fullName']);
+
+        return Professional(
+          id: doc.id,
+          email: readText(profile['email']),
+          name: profileName.isNotEmpty
+              ? profileName
+              : readText(data['fullName']),
+          profession: professions.isNotEmpty
+              ? professions.first
+              : 'Professional',
+          skills: readList(profile['skills']),
+          services: readList(profile['services']),
+          country: readText(profile['country']),
+          region: readText(profile['region']),
+          city: readText(profile['city']),
+          availability: readText(profile['availability']),
+          phone: readText(profile['telephone']),
+          rating: 0,
+          reviewCount: 0,
+        );
+      }).toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        _allProfessionals = professionals;
+        searchResults = professionals;
+        hasSearched = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _loadError = 'Could not load professionals: $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
 
   void _searchProfessionals() {
     final searchText = searchController.text.trim().toLowerCase();
     final locationText = locationController.text.trim().toLowerCase();
 
-    final results = sampleProfessionals.where((professional) {
+    final results = _allProfessionals.where((professional) {
       final professionalMatches = searchText.isEmpty ||
           professional.name.toLowerCase().contains(searchText) ||
           professional.profession.toLowerCase().contains(searchText) ||
@@ -651,37 +755,6 @@ class _ProfessionalsDirectoryScreenState
                   fontSize: 16,
                 ),
               ),
-
-              const SizedBox(height: 8),
-
-              if (professional.reviewCount == 0)
-                const Text(
-                  'No reviews yet',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.black54,
-                    fontStyle: FontStyle.italic,
-                  ),
-                )
-              else
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.star,
-                      size: 22,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${professional.rating.toStringAsFixed(1)} '
-                          '(${professional.reviewCount} reviews)',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
 
               const SizedBox(height: 8),
 
@@ -876,32 +949,23 @@ class _ProfessionalsDirectoryScreenState
 
           const SizedBox(height: 12),
 
-          if (!hasSearched)
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Column(
-                children: [
-                  Icon(
-                    Icons.people_outline,
-                    size: 48,
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'Search for a professional, skill or service.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
+
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(
+                child: CircularProgressIndicator(),
               ),
             )
-          else
-            if (searchResults.isEmpty)
+          else if (_loadError != null)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                _loadError!,
+                style: const TextStyle(color: Colors.red),
+              ),
+            )
+          else if (!hasSearched)
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -910,31 +974,47 @@ class _ProfessionalsDirectoryScreenState
                 ),
                 child: const Column(
                   children: [
-                    Icon(
-                      Icons.search_off,
-                      size: 48,
-                    ),
+                    Icon(Icons.people_outline, size: 48),
                     SizedBox(height: 10),
                     Text(
-                      'No professionals found.',
+                      'Search for a professional, skill or service.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 6),
-                    Text(
-                      'Try changing your search or location.',
-                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 16),
                     ),
                   ],
                 ),
               )
-            else
-              ...searchResults.map(
-                    (professional) => _buildProfessionalCard(professional),
-              ),
+            else if (searchResults.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Column(
+                    children: [
+                      Icon(Icons.search_off, size: 48),
+                      SizedBox(height: 10),
+                      Text(
+                        'No professionals found.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 6),
+                      Text(
+                        'Try changing your search or location.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ...searchResults.map(
+                      (professional) => _buildProfessionalCard(professional),
+                ),
         ],
       ),
     );
@@ -957,31 +1037,88 @@ class _BusinessesDirectoryScreenState
   List<Business> searchResults = [];
 
   bool hasSearched = false;
+  bool _isLoading = false;
+  String? _loadError;
 
-  void _searchBusinesses() {
+  Future<void> _searchBusinesses() async {
     final searchText = searchController.text.trim().toLowerCase();
     final locationText = locationController.text.trim().toLowerCase();
 
-    final results = sampleBusinesses.where((business) {
-      final businessMatches = searchText.isEmpty ||
-          business.name.toLowerCase().contains(searchText) ||
-          business.category.toLowerCase().contains(searchText) ||
-          business.services.any(
-                (service) => service.toLowerCase().contains(searchText),
-          );
-
-      final locationMatches = locationText.isEmpty ||
-          business.country.toLowerCase().contains(locationText) ||
-          business.region.toLowerCase().contains(locationText) ||
-          business.city.toLowerCase().contains(locationText);
-
-      return businessMatches && locationMatches;
-    }).toList();
-
     setState(() {
-      searchResults = results;
+      _isLoading = true;
+      _loadError = null;
       hasSearched = true;
     });
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('publicProfiles')
+          .where('accountType', isEqualTo: 'Business')
+          .get();
+
+      final results = snapshot.docs
+          .map((doc) {
+        final data = doc.data();
+        final profile = Map<String, dynamic>.from(
+          data['businessProfile'] ?? {},
+        );
+
+        return Business(
+          id: doc.id,
+          email: profile['email']?.toString() ?? '',
+          name: profile['businessName']?.toString() ??
+              data['fullName']?.toString() ??
+              '',
+          category: profile['businessCategory']?.toString() ??
+              profile['category']?.toString() ??
+              '',
+          services: (profile['services'] ?? '')
+              .toString()
+              .split(RegExp(r'[,;\n]'))
+              .map((service) => service.trim())
+              .where((service) => service.isNotEmpty)
+              .toList(),
+          country: profile['country']?.toString() ?? '',
+          region: profile['region']?.toString() ?? '',
+          city: profile['city']?.toString() ?? '',
+          address: profile['physicalAddress']?.toString() ?? '',
+          availability: profile['availability']?.toString() ?? '',
+          phone: profile['telephone']?.toString() ?? '',
+          rating: (profile['rating'] ?? 0).toDouble(),
+          reviewCount: (profile['reviewCount'] ?? 0).toInt(),
+        );
+      })
+          .where((business) {
+        final businessMatches = searchText.isEmpty ||
+            business.name.toLowerCase().contains(searchText) ||
+            business.category.toLowerCase().contains(searchText) ||
+            business.services.any(
+                  (service) => service.toLowerCase().contains(searchText),
+            );
+
+        final locationMatches = locationText.isEmpty ||
+            business.country.toLowerCase().contains(locationText) ||
+            business.region.toLowerCase().contains(locationText) ||
+            business.city.toLowerCase().contains(locationText);
+
+        return businessMatches && locationMatches;
+      })
+          .toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        searchResults = results;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+        _loadError = 'Unable to load businesses. Please try again.';
+      });
+    }
   }
 
   Widget _buildBusinessCard(Business business) {

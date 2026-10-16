@@ -1,8 +1,10 @@
+
 import 'package:flutter/material.dart';
 import 'departments.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'countries.dart';
+
 class ProfessionalProfileFormScreen extends StatefulWidget {
   const ProfessionalProfileFormScreen({super.key});
 
@@ -16,6 +18,8 @@ class _ProfessionalProfileFormScreenState
   final TextEditingController _fullNameController =
   TextEditingController();
   final TextEditingController _telephoneController =
+  TextEditingController();
+  final TextEditingController _whatsAppController =
   TextEditingController();
   final TextEditingController _cityController =
   TextEditingController();
@@ -45,6 +49,7 @@ class _ProfessionalProfileFormScreenState
   final List<String> _departments = [''];
   final List<String> _otherDepartments = [''];
   final List<Map<String, String>> _additionalCountries = [];
+
   String? _yearsOfExperience;
   String? _availability;
   String _countryTelephoneCode = '';
@@ -72,6 +77,7 @@ class _ProfessionalProfileFormScreenState
     _skillsController.dispose();
     _servicesController.dispose();
     _cityController.dispose();
+    _countryCodeController.dispose();
     _educationController.dispose();
     _certificationsController.dispose();
     _websiteController.dispose();
@@ -86,6 +92,7 @@ class _ProfessionalProfileFormScreenState
       _otherDepartments.add('');
     });
   }
+
   void _addPosition() {
     setState(() {
       _positions.add({
@@ -94,6 +101,7 @@ class _ProfessionalProfileFormScreenState
       });
     });
   }
+
   Future<void> _loadProfile() async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -116,18 +124,21 @@ class _ProfessionalProfileFormScreenState
       if (profile is Map<String, dynamic>) {
         _fullNameController.text = profile['fullName'] ?? '';
         _telephoneController.text = profile['telephone'] ?? '';
+        _whatsAppController.text = profile['whatsApp']?.toString() ?? '';
         _cityController.text = profile['city'] ?? '';
         _emailController.text = profile['email'] ?? '';
         _locationController.text = profile['country'] ?? '';
+
         _countryTelephoneCode =
             countryTelephoneCodes[_locationController.text] ?? '';
         _countryCodeController.text = _countryTelephoneCode;
+
         _aboutMeController.text = profile['aboutMe'] ?? '';
         _skillsController.text = profile['skills'] ?? '';
         _servicesController.text = profile['services'] ?? '';
-        _cityController.text = profile['city'] ?? '';
         _educationController.text = profile['education'] ?? '';
-        _certificationsController.text = profile['certifications'] ?? '';
+        _certificationsController.text =
+            profile['certifications'] ?? '';
         _websiteController.text = profile['website'] ?? '';
         _languagesController.text = profile['languages'] ?? '';
 
@@ -138,22 +149,44 @@ class _ProfessionalProfileFormScreenState
         if (professions is List) {
           _professions
             ..clear()
-            ..addAll(professions.map((item) => item.toString()));
+            ..addAll(
+              professions.map((item) => item.toString()),
+            );
 
           if (_professions.isEmpty) {
             _professions.add('');
           }
         }
+
         final departments = profile['departments'];
         if (departments is List) {
           _departments
             ..clear()
-            ..addAll(departments.map((item) => item.toString()));
+            ..addAll(
+              departments.map((item) => item.toString()),
+            );
 
           if (_departments.isEmpty) {
             _departments.add('');
           }
         }
+
+        final otherDepartments = profile['otherDepartments'];
+        if (otherDepartments is List) {
+          _otherDepartments
+            ..clear()
+            ..addAll(
+              otherDepartments.map((item) => item.toString()),
+            );
+        }
+
+        while (_departments.length < _professions.length) {
+          _departments.add('');
+        }
+        while (_otherDepartments.length < _professions.length) {
+          _otherDepartments.add('');
+        }
+
         final positions = profile['positions'];
         if (positions is List) {
           _positions
@@ -164,9 +197,8 @@ class _ProfessionalProfileFormScreenState
               ),
             );
         }
-        final additionalCountries =
-        profile['additionalCountries'];
 
+        final additionalCountries = profile['additionalCountries'];
         if (additionalCountries is List) {
           _additionalCountries
             ..clear()
@@ -176,18 +208,24 @@ class _ProfessionalProfileFormScreenState
               ),
             );
         }
-        debugPrint('LOADED ADDITIONAL COUNTRIES: $_additionalCountries');
+
+        debugPrint(
+          'LOADED ADDITIONAL COUNTRIES: $_additionalCountries',
+        );
 
         final socialMedia = profile['socialMedia'];
         debugPrint('LOADED SOCIAL MEDIA: $socialMedia');
+
         if (socialMedia is Map) {
           _socialMedia.forEach((platform, _) {
             _socialMedia[platform] =
                 socialMedia[platform]?.toString() ?? '';
           });
         }
+
         final additionalSocialMedia =
         profile['additionalSocialMedia'];
+
         if (additionalSocialMedia is List) {
           _additionalSocialMedia
             ..clear()
@@ -197,17 +235,16 @@ class _ProfessionalProfileFormScreenState
               ),
             );
         }
+
         final hasSocialMedia = _socialMedia.values.any(
               (value) => value.trim().isNotEmpty,
         );
 
-        _showSocialMedia = hasSocialMedia ||
-            _additionalSocialMedia.isNotEmpty;
+        _showSocialMedia =
+            hasSocialMedia || _additionalSocialMedia.isNotEmpty;
       }
     } catch (e) {
-      debugPrint(
-        'Failed to load professional profile: $e',
-      );
+      debugPrint('Failed to load professional profile: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -217,8 +254,8 @@ class _ProfessionalProfileFormScreenState
                 (value) => value.trim().isNotEmpty,
           );
 
-          _showSocialMedia = hasSocialMedia ||
-              _additionalSocialMedia.isNotEmpty;
+          _showSocialMedia =
+              hasSocialMedia || _additionalSocialMedia.isNotEmpty;
         });
       }
     }
@@ -230,7 +267,9 @@ class _ProfessionalProfileFormScreenState
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please sign in before saving your profile.'),
+          content: Text(
+            'Please sign in before saving your profile.',
+          ),
         ),
       );
       return;
@@ -238,7 +277,9 @@ class _ProfessionalProfileFormScreenState
 
     if (_fullNameController.text.trim().isEmpty ||
         _locationController.text.trim().isEmpty ||
-        _professions.every((profession) => profession.trim().isEmpty) ||
+        _professions.every(
+              (profession) => profession.trim().isEmpty,
+        ) ||
         _servicesController.text.trim().isEmpty ||
         _availability == null ||
         _languagesController.text.trim().isEmpty) {
@@ -251,9 +292,11 @@ class _ProfessionalProfileFormScreenState
       );
       return;
     }
+
     final profileData = {
       'fullName': _fullNameController.text.trim(),
       'telephone': _telephoneController.text.trim(),
+      'whatsApp': _whatsAppController.text.trim(),
       'city': _cityController.text.trim(),
       'email': _emailController.text.trim(),
       'socialMedia': _socialMedia,
@@ -268,13 +311,14 @@ class _ProfessionalProfileFormScreenState
       'aboutMe': _aboutMeController.text.trim(),
       'yearsOfExperience': _yearsOfExperience,
       'skills': _skillsController.text.trim(),
-      'city': _cityController.text.trim(),
       'availability': _availability,
       'education': _educationController.text.trim(),
       'certifications': _certificationsController.text.trim(),
       'website': _websiteController.text.trim(),
       'languages': _languagesController.text.trim(),
     };
+
+
     try {
       await FirebaseFirestore.instance
           .collection('users')
@@ -283,11 +327,24 @@ class _ProfessionalProfileFormScreenState
         'professionalProfile': profileData,
       }, SetOptions(merge: true));
 
+      await FirebaseFirestore.instance
+          .collection('publicProfiles')
+          .doc(user.uid)
+          .set({
+        'accountType': 'Professional',
+        'fullName': profileData['fullName'],
+        'professionalProfile': profileData,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Professional profile saved successfully.'),
+          content: Text(
+            'Professional profile saved successfully.',
+          ),
         ),
       );
     } catch (e) {
@@ -300,20 +357,23 @@ class _ProfessionalProfileFormScreenState
       );
     }
   }
-@override
-void initState() {
-super.initState();
-_loadProfile();
-}
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
   @override
   Widget build(BuildContext context) {
-if (_isLoadingProfile) {
-return const Scaffold(
-body: Center(
-child: CircularProgressIndicator(),
-),
-);
-}
+    if (_isLoadingProfile) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Professional Profile'),
@@ -330,17 +390,16 @@ child: CircularProgressIndicator(),
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 8),
-
             const Text(
               'Complete your professional profile so people can discover you.',
             ),
-
             const SizedBox(height: 24),
 
+            // Full Name: maximum 100 characters.
             TextField(
               controller: _fullNameController,
+              maxLength: 100,
               decoration: InputDecoration(
                 label: RichText(
                   text: const TextSpan(
@@ -352,9 +411,7 @@ child: CircularProgressIndicator(),
                     children: [
                       TextSpan(
                         text: '*',
-                        style: TextStyle(
-                          color: Colors.red,
-                        ),
+                        style: TextStyle(color: Colors.red),
                       ),
                     ],
                   ),
@@ -366,6 +423,7 @@ child: CircularProgressIndicator(),
 
             const SizedBox(height: 16),
 
+            // Country autocomplete: unchanged.
             Autocomplete<String>(
               initialValue: TextEditingValue(
                 text: _locationController.text,
@@ -386,7 +444,8 @@ child: CircularProgressIndicator(),
                   _locationController.text = selection;
                   _countryTelephoneCode =
                       countryTelephoneCodes[selection] ?? '';
-                  _countryCodeController.text = _countryTelephoneCode;
+                  _countryCodeController.text =
+                      _countryTelephoneCode;
                 });
               },
               fieldViewBuilder: (
@@ -396,46 +455,45 @@ child: CircularProgressIndicator(),
                   VoidCallback onFieldSubmitted,
                   ) {
                 return Focus(
-                    onFocusChange: (hasFocus) {
-                      if (!hasFocus) {
-                        textEditingController.selection =
-                            TextSelection.collapsed(
-                              offset: textEditingController.text.length,
-                            );
-                      }
-                    },
-                    child: TextField(
-                      controller: textEditingController,
-                      focusNode: focusNode,
-                  onChanged: (value) {
-                    _locationController.text = value;
+                  onFocusChange: (hasFocus) {
+                    if (!hasFocus) {
+                      textEditingController.selection =
+                          TextSelection.collapsed(
+                            offset: textEditingController.text.length,
+                          );
+                    }
                   },
-                  decoration: InputDecoration(
-                    label: RichText(
-                      text: const TextSpan(
-                        text: 'Country ',
-                        style: TextStyle(
-                          color: Colors.black87,
-                          fontSize: 16,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: '*',
-                            style: TextStyle(
-                              color: Colors.red,
-                            ),
+                  child: TextField(
+                    controller: textEditingController,
+                    focusNode: focusNode,
+                    onChanged: (value) {
+                      _locationController.text = value;
+                    },
+                    decoration: InputDecoration(
+                      label: RichText(
+                        text: const TextSpan(
+                          text: 'Country ',
+                          style: TextStyle(
+                            color: Colors.black87,
+                            fontSize: 16,
                           ),
-                        ],
+                          children: [
+                            TextSpan(
+                              text: '*',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ],
+                        ),
                       ),
+                      hintText: 'Type to search country',
+                      prefixIcon: const Icon(Icons.public),
+                      border: const OutlineInputBorder(),
                     ),
-                    hintText: 'Type to search country',
-                    prefixIcon: const Icon(Icons.public),
-                    border: const OutlineInputBorder(),
                   ),
-                    ),
                 );
               },
             ),
+
             const SizedBox(height: 16),
 
             Row(
@@ -452,11 +510,11 @@ child: CircularProgressIndicator(),
                     ),
                   ),
                 ),
-
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextFormField(
                     controller: _telephoneController,
+                    maxLength: 25,
                     keyboardType: TextInputType.phone,
                     decoration: const InputDecoration(
                       labelText: 'Telephone (optional)',
@@ -469,25 +527,66 @@ child: CircularProgressIndicator(),
               ],
             ),
 
+
+            const SizedBox(height: 12),
+
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 85,
+                  child: TextFormField(
+                    readOnly: true,
+                    controller: TextEditingController(
+                      text: _countryTelephoneCode,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Code',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextFormField(
+                    controller: _whatsAppController,
+                    maxLength: 25,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'WhatsApp Number (optional)',
+                      hintText: 'e.g. 712 345 678',
+                      prefixIcon: Icon(Icons.chat),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+
             const SizedBox(height: 16),
 
+            // Physical Address: maximum 300 characters.
             TextFormField(
               controller: _cityController,
               maxLines: 2,
+              maxLength: 300,
               decoration: const InputDecoration(
                 labelText: 'Physical Address (optional)',
-                hintText: 'City, town, street, estate, building, village, etc.',
+                hintText:
+                'City, town, street, estate, building, village, etc.',
                 prefixIcon: Icon(Icons.location_city),
                 border: OutlineInputBorder(),
                 alignLabelWithHint: true,
               ),
             ),
 
-
             const SizedBox(height: 16),
 
+            // Email: maximum 254 characters.
             TextFormField(
               controller: _emailController,
+              maxLength: 254,
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
                 labelText: 'Email (optional)',
@@ -506,7 +605,6 @@ child: CircularProgressIndicator(),
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 8),
 
             ..._professions.asMap().entries.map((entry) {
@@ -516,10 +614,12 @@ child: CircularProgressIndicator(),
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Column(
                   children: [
+                    // Each profession: maximum 100 characters.
                     TextField(
                       controller: TextEditingController(
                         text: _professions[index],
                       ),
+                      maxLength: 100,
                       decoration: InputDecoration(
                         label: RichText(
                           text: TextSpan(
@@ -552,19 +652,22 @@ child: CircularProgressIndicator(),
 
                     const SizedBox(height: 12),
 
+                    // Department autocomplete: unchanged.
                     Autocomplete<String>(
                       initialValue: TextEditingValue(
                         text: _departments[index],
                       ),
-                      optionsBuilder: (TextEditingValue textEditingValue) {
+                      optionsBuilder:
+                          (TextEditingValue textEditingValue) {
                         if (textEditingValue.text.isEmpty) {
                           return departments;
                         }
 
                         return departments.where(
-                              (department) => department.toLowerCase().contains(
-                            textEditingValue.text.toLowerCase(),
-                          ),
+                              (department) =>
+                              department.toLowerCase().contains(
+                                textEditingValue.text.toLowerCase(),
+                              ),
                         );
                       },
                       onSelected: (String selection) {
@@ -588,7 +691,8 @@ child: CircularProgressIndicator(),
                           decoration: const InputDecoration(
                             labelText: 'Department (optional)',
                             hintText: 'Type to search department',
-                            prefixIcon: Icon(Icons.account_tree_outlined),
+                            prefixIcon:
+                            Icon(Icons.account_tree_outlined),
                             border: OutlineInputBorder(),
                           ),
                           onChanged: (value) {
@@ -603,7 +707,9 @@ child: CircularProgressIndicator(),
                     if (_departments[index] == 'Other') ...[
                       const SizedBox(height: 12),
 
+                      // Other Department: maximum 100 characters.
                       TextField(
+                        maxLength: 100,
                         decoration: const InputDecoration(
                           labelText: 'Other Department (optional)',
                           prefixIcon: Icon(Icons.edit_outlined),
@@ -643,6 +749,7 @@ child: CircularProgressIndicator(),
                 label: const Text('Dual citizen? Add country'),
               ),
             ),
+
             ..._additionalCountries.asMap().entries.map((entry) {
               final index = entry.key;
 
@@ -650,11 +757,14 @@ child: CircularProgressIndicator(),
                 padding: const EdgeInsets.only(top: 12),
                 child: Column(
                   children: [
+                    // Additional country autocomplete: unchanged.
                     Autocomplete<String>(
                       initialValue: TextEditingValue(
-                        text: _additionalCountries[index]['country'] ?? '',
+                        text:
+                        _additionalCountries[index]['country'] ?? '',
                       ),
-                      optionsBuilder: (TextEditingValue textEditingValue) {
+                      optionsBuilder:
+                          (TextEditingValue textEditingValue) {
                         if (textEditingValue.text.isEmpty) {
                           return countries;
                         }
@@ -667,7 +777,8 @@ child: CircularProgressIndicator(),
                       },
                       onSelected: (String selection) {
                         setState(() {
-                          _additionalCountries[index]['country'] = selection;
+                          _additionalCountries[index]['country'] =
+                              selection;
                         });
                       },
                       fieldViewBuilder: (
@@ -680,7 +791,8 @@ child: CircularProgressIndicator(),
                           controller: textEditingController,
                           focusNode: focusNode,
                           onChanged: (value) {
-                            _additionalCountries[index]['country'] = value;
+                            _additionalCountries[index]['country'] =
+                                value;
                           },
                           decoration: const InputDecoration(
                             labelText: 'Additional Country',
@@ -703,8 +815,8 @@ child: CircularProgressIndicator(),
                             readOnly: true,
                             controller: TextEditingController(
                               text: countryTelephoneCodes[
-                              _additionalCountries[index]['country']
-                              ] ??
+                              _additionalCountries[index]
+                              ['country']] ??
                                   '',
                             ),
                             decoration: const InputDecoration(
@@ -713,16 +825,18 @@ child: CircularProgressIndicator(),
                             ),
                           ),
                         ),
-
                         const SizedBox(width: 8),
-
                         Expanded(
                           child: TextFormField(
                             initialValue:
-                            _additionalCountries[index]['telephone'] ?? '',
+                            _additionalCountries[index]
+                            ['telephone'] ??
+                                '',
+                            maxLength: 25,
                             keyboardType: TextInputType.phone,
                             onChanged: (value) {
-                              _additionalCountries[index]['telephone'] = value;
+                              _additionalCountries[index]['telephone'] =
+                                  value;
                             },
                             decoration: const InputDecoration(
                               labelText: 'Telephone (optional)',
@@ -737,12 +851,15 @@ child: CircularProgressIndicator(),
 
                     const SizedBox(height: 16),
 
+                    // Preserved from your original code.
                     TextFormField(
                       controller: _cityController,
                       maxLines: 2,
+                      maxLength: 300,
                       decoration: const InputDecoration(
                         labelText: 'Physical Address (optional)',
-                        hintText: 'City, town, street, estate, building, village, etc.',
+                        hintText:
+                        'City, town, street, estate, building, village, etc.',
                         prefixIcon: Icon(Icons.location_city),
                         border: OutlineInputBorder(),
                         alignLabelWithHint: true,
@@ -752,6 +869,7 @@ child: CircularProgressIndicator(),
                 ),
               );
             }),
+
             const SizedBox(height: 28),
 
             const Text(
@@ -761,13 +879,10 @@ child: CircularProgressIndicator(),
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 8),
-
             const Text(
               'Add positions you currently hold or have held in organizations.',
             ),
-
             const SizedBox(height: 12),
 
             ..._positions.asMap().entries.map((entry) {
@@ -779,24 +894,31 @@ child: CircularProgressIndicator(),
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     children: [
+                      // Position title: maximum 100 characters.
                       TextField(
                         controller: TextEditingController(
                           text: _positions[index]['position'] ?? '',
                         ),
+                        maxLength: 100,
                         decoration: InputDecoration(
-                          labelText: 'Position ${index + 1} (optional)',
+                          labelText:
+                          'Position ${index + 1} (optional)',
                           border: const OutlineInputBorder(),
                         ),
                         onChanged: (value) {
                           _positions[index]['position'] = value;
                         },
                       ),
+
                       const SizedBox(height: 16),
 
+                      // Organization: maximum 150 characters.
                       TextField(
                         controller: TextEditingController(
-                          text: _positions[index]['organization'] ?? '',
+                          text:
+                          _positions[index]['organization'] ?? '',
                         ),
+                        maxLength: 150,
                         decoration: const InputDecoration(
                           labelText: 'Organization',
                           border: OutlineInputBorder(),
@@ -819,6 +941,7 @@ child: CircularProgressIndicator(),
 
             const SizedBox(height: 24),
 
+            // About Me: existing limit retained.
             TextFormField(
               controller: _aboutMeController,
               maxLines: 5,
@@ -835,6 +958,7 @@ child: CircularProgressIndicator(),
 
             const SizedBox(height: 16),
 
+            // Years of Experience dropdown: unchanged.
             DropdownButtonFormField<String>(
               value: _yearsOfExperience,
               decoration: const InputDecoration(
@@ -873,9 +997,11 @@ child: CircularProgressIndicator(),
 
             const SizedBox(height: 16),
 
+            // Skills & Expertise: maximum 500 characters.
             TextFormField(
               controller: _skillsController,
               maxLines: 3,
+              maxLength: 500,
               decoration: const InputDecoration(
                 labelText: 'Skills & Expertise (optional)',
                 hintText: 'e.g. Graphic Design, Branding, Photoshop',
@@ -887,36 +1013,39 @@ child: CircularProgressIndicator(),
 
             const SizedBox(height: 16),
 
+            // My Services: maximum 1,000 characters.
             TextFormField(
               controller: _servicesController,
               maxLines: 4,
-    decoration: InputDecoration(
-    label: RichText(
-    text: const TextSpan(
-    text: 'My Services ',
-    style: TextStyle(
-    color: Colors.black87,
-    fontSize: 16,
-    ),
-    children: [
-    TextSpan(
-    text: '*',
-    style: TextStyle(
-    color: Colors.red,
-    ),
-    ),
-    ],
-    ),
-    ),
-    hintText: 'e.g. Logo Design, Video Editing, Website Development',
-    alignLabelWithHint: true,
-    prefixIcon: const Icon(Icons.design_services_outlined),
-      border: const OutlineInputBorder(),
-    ),
+              maxLength: 1000,
+              decoration: InputDecoration(
+                label: RichText(
+                  text: const TextSpan(
+                    text: 'My Services ',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 16,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: '*',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                hintText:
+                'e.g. Logo Design, Video Editing, Website Development',
+                alignLabelWithHint: true,
+                prefixIcon:
+                const Icon(Icons.design_services_outlined),
+                border: const OutlineInputBorder(),
+              ),
             ),
 
             const SizedBox(height: 16),
 
+            // Availability dropdown: unchanged.
             DropdownButtonFormField<String>(
               value: _availability,
               decoration: InputDecoration(
@@ -930,9 +1059,7 @@ child: CircularProgressIndicator(),
                     children: [
                       TextSpan(
                         text: '*',
-                        style: TextStyle(
-                          color: Colors.red,
-                        ),
+                        style: TextStyle(color: Colors.red),
                       ),
                     ],
                   ),
@@ -961,46 +1088,55 @@ child: CircularProgressIndicator(),
               },
             ),
 
-      const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-      TextFormField(
-        controller: _educationController,
-        maxLines: 4,
-        decoration: const InputDecoration(
-          labelText: 'Education & Qualifications (optional)',
-          hintText: 'e.g. BSc Computer Science, Diploma in Graphic Design',
-          alignLabelWithHint: true,
-          prefixIcon: Icon(Icons.school_outlined),
-          border: OutlineInputBorder(),
-        ),
-      ),
+            // Education & Qualifications: maximum 1,000 characters.
+            TextFormField(
+              controller: _educationController,
+              maxLines: 4,
+              maxLength: 1000,
+              decoration: const InputDecoration(
+                labelText: 'Education & Qualifications (optional)',
+                hintText:
+                'e.g. BSc Computer Science, Diploma in Graphic Design',
+                alignLabelWithHint: true,
+                prefixIcon: Icon(Icons.school_outlined),
+                border: OutlineInputBorder(),
+              ),
+            ),
 
-      const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-      TextFormField(
-        controller: _certificationsController,
-        maxLines: 3,
-        decoration: const InputDecoration(
-          labelText: 'Certifications & Licences (optional)',
-          hintText: 'e.g. AWS Certified, Driving Licence, CPA',
-          alignLabelWithHint: true,
-          prefixIcon: Icon(Icons.verified_outlined),
-          border: OutlineInputBorder(),
-        ),
-      ),
+            // Certifications & Licences: maximum 1,000 characters.
+            TextFormField(
+              controller: _certificationsController,
+              maxLines: 3,
+              maxLength: 1000,
+              decoration: const InputDecoration(
+                labelText: 'Certifications & Licences (optional)',
+                hintText:
+                'e.g. AWS Certified, Driving Licence, CPA',
+                alignLabelWithHint: true,
+                prefixIcon: Icon(Icons.verified_outlined),
+                border: OutlineInputBorder(),
+              ),
+            ),
 
-      const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-      TextFormField(
-        controller: _websiteController,
-        keyboardType: TextInputType.url,
-        decoration: const InputDecoration(
-          labelText: 'Website / Portfolio (optional)',
-          hintText: 'e.g. https://example.com',
-          prefixIcon: Icon(Icons.language),
-          border: OutlineInputBorder(),
-        ),
-      ),
+            // Website / Portfolio: maximum 500 characters.
+            TextFormField(
+              controller: _websiteController,
+              maxLength: 500,
+              keyboardType: TextInputType.url,
+              decoration: const InputDecoration(
+                labelText: 'Website / Portfolio (optional)',
+                hintText: 'e.g. https://example.com',
+                prefixIcon: Icon(Icons.language),
+                border: OutlineInputBorder(),
+              ),
+            ),
+
             const SizedBox(height: 16),
 
             OutlinedButton.icon(
@@ -1018,6 +1154,7 @@ child: CircularProgressIndicator(),
                     : 'Add Social Media Links (Optional)',
               ),
             ),
+
             if (_showSocialMedia) ...[
               const SizedBox(height: 12),
 
@@ -1027,6 +1164,7 @@ child: CircularProgressIndicator(),
                   child: TextFormField(
                     keyboardType: TextInputType.url,
                     initialValue: _socialMedia[platform] ?? '',
+                    maxLength: 500,
                     decoration: InputDecoration(
                       labelText: '$platform (Optional)',
                       hintText: 'Enter your $platform profile link',
@@ -1040,7 +1178,9 @@ child: CircularProgressIndicator(),
                 );
               }),
             ],
+
             const SizedBox(height: 4),
+
             ..._additionalSocialMedia.asMap().entries.map((entry) {
               final index = entry.key;
 
@@ -1050,20 +1190,28 @@ child: CircularProgressIndicator(),
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     children: [
+                      // Additional platform name: maximum 50 characters.
                       TextField(
+                        maxLength: 50,
                         decoration: const InputDecoration(
                           labelText: 'Platform',
-                          hintText: 'e.g. Threads, Pinterest, Telegram',
+                          hintText:
+                          'e.g. Threads, Pinterest, Telegram',
                           prefixIcon: Icon(Icons.public),
                           border: OutlineInputBorder(),
                         ),
                         onChanged: (value) {
-                          _additionalSocialMedia[index]['platform'] = value;
+                          _additionalSocialMedia[index]['platform'] =
+                              value;
                         },
                       ),
+
                       const SizedBox(height: 12),
+
+                      // Additional profile link: maximum 500 characters.
                       TextField(
                         keyboardType: TextInputType.url,
+                        maxLength: 500,
                         decoration: const InputDecoration(
                           labelText: 'Profile Link',
                           hintText: 'Enter your profile link',
@@ -1071,7 +1219,8 @@ child: CircularProgressIndicator(),
                           border: OutlineInputBorder(),
                         ),
                         onChanged: (value) {
-                          _additionalSocialMedia[index]['link'] = value;
+                          _additionalSocialMedia[index]['link'] =
+                              value;
                         },
                       ),
                     ],
@@ -1093,37 +1242,37 @@ child: CircularProgressIndicator(),
               label: const Text('Add Social Media'),
             ),
 
-      const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-      TextFormField(
-        controller: _languagesController,
-        maxLines: 2,
-        decoration: InputDecoration(
-          label: RichText(
-            text: const TextSpan(
-              text: 'Languages ',
-              style: TextStyle(
-                color: Colors.black87,
-                fontSize: 16,
-              ),
-              children: [
-                TextSpan(
-                  text: '*',
-                  style: TextStyle(
-                    color: Colors.red,
+            // Languages: maximum 200 characters.
+            TextFormField(
+              controller: _languagesController,
+              maxLines: 2,
+              maxLength: 200,
+              decoration: InputDecoration(
+                label: RichText(
+                  text: const TextSpan(
+                    text: 'Languages ',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 16,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: '*',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+                hintText: 'e.g. English, Swahili, French',
+                alignLabelWithHint: true,
+                prefixIcon: const Icon(Icons.translate),
+                border: const OutlineInputBorder(),
+              ),
             ),
-          ),
-          hintText: 'e.g. English, Swahili, French',
-          alignLabelWithHint: true,
-          prefixIcon: const Icon(Icons.translate),
-          border: const OutlineInputBorder(),
-        ),
-      ),
 
-      const SizedBox(height: 32),
+            const SizedBox(height: 32),
 
             SizedBox(
               width: double.infinity,
