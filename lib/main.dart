@@ -382,8 +382,7 @@ class Professional {
   final String address;
   final String availability;
   final String phone;
-  final double rating;
-  final int reviewCount;
+  final String whatsApp;
 
   const Professional({
     required this.id,
@@ -398,8 +397,7 @@ class Professional {
     this.address = '',
     required this.availability,
     required this.phone,
-    required this.rating,
-    required this.reviewCount,
+    this.whatsApp = '',
   });
 }
 class Business {
@@ -414,8 +412,6 @@ class Business {
   final String address;
   final String availability;
   final String phone;
-  final double rating;
-  final int reviewCount;
 
   const Business({
     required this.id,
@@ -429,8 +425,6 @@ class Business {
     this.address = '',
     required this.availability,
     required this.phone,
-    required this.rating,
-    required this.reviewCount,
   });
 }
 const List<Professional> sampleProfessionals = [
@@ -455,8 +449,6 @@ const List<Professional> sampleProfessionals = [
     city: 'Siaya',
     availability: 'Remote',
     phone: '+254700000001',
-    rating: 4.8,
-    reviewCount: 0,
   ),
 
   Professional(
@@ -480,8 +472,6 @@ const List<Professional> sampleProfessionals = [
     city: 'Nairobi',
     availability: 'On-site',
     phone: '+254700000002',
-    rating: 4.6,
-    reviewCount: 0,
   ),
 
   Professional(
@@ -505,8 +495,6 @@ const List<Professional> sampleProfessionals = [
     city: 'Kampala',
     availability: 'Remote',
     phone: '+256700000003',
-    rating: 4.9,
-    reviewCount: 0,
   ),
 ];
 
@@ -528,8 +516,6 @@ const List<Business> sampleBusinesses = [
     city: 'Migori',
     availability: 'On-site',
     phone: '+254700000010',
-    rating: 4.8,
-    reviewCount: 0,
   ),
 
   Business(
@@ -548,8 +534,6 @@ const List<Business> sampleBusinesses = [
     city: 'Kisumu',
     availability: 'On-site',
     phone: '+254700000011',
-    rating: 4.5,
-    reviewCount: 0,
   ),
 
   Business(
@@ -568,8 +552,6 @@ const List<Business> sampleBusinesses = [
     city: 'Kampala',
     availability: 'Remote',
     phone: '+256700000012',
-    rating: 4.7,
-    reviewCount: 0,
   ),
 ];
 
@@ -661,8 +643,7 @@ class _ProfessionalsDirectoryScreenState
           city: readText(profile['city']),
           availability: readText(profile['availability']),
           phone: readText(profile['telephone']),
-          rating: 0,
-          reviewCount: 0,
+          whatsApp: readText(profile['whatsApp']),
         );
       }).toList();
 
@@ -1084,8 +1065,6 @@ class _BusinessesDirectoryScreenState
           address: profile['physicalAddress']?.toString() ?? '',
           availability: profile['availability']?.toString() ?? '',
           phone: profile['telephone']?.toString() ?? '',
-          rating: (profile['rating'] ?? 0).toDouble(),
-          reviewCount: (profile['reviewCount'] ?? 0).toInt(),
         );
       })
           .where((business) {
@@ -1158,36 +1137,6 @@ class _BusinessesDirectoryScreenState
                   fontSize: 16,
                 ),
               ),
-
-              const SizedBox(height: 8),
-
-              if (business.reviewCount == 0)
-                const Text(
-                  'No reviews yet',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.black54,
-                    fontStyle: FontStyle.italic,
-                  ),
-                )
-              else
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.star,
-                      size: 22,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${business.rating.toStringAsFixed(1)} '
-                          '(${business.reviewCount} reviews)',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
 
               const SizedBox(height: 8),
 
@@ -1532,29 +1481,6 @@ class _BusinessProfileScreenState
 
             const SizedBox(height: 16),
 
-            if (business.reviewCount == 0)
-              const Text(
-                'No reviews yet',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.black54,
-                  fontStyle: FontStyle.italic,
-                ),
-              )
-            else
-              Row(
-                children: [
-                  const Icon(Icons.star),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${business.rating.toStringAsFixed(1)} '
-                        '(${business.reviewCount} reviews)',
-                  ),
-                ],
-              ),
-
-            const SizedBox(height: 16),
-
             const Text(
               'Location',
               style: TextStyle(
@@ -1703,23 +1629,47 @@ class _ProfessionalProfileScreenState
                   }
                 },
               ),
+
               ListTile(
-                leading: const Icon(Icons.message),
-                title: const Text('Send Message'),
-                onTap: () {
+                leading: const Icon(Icons.chat, color: Colors.green),
+                title: const Text('WhatsApp'),
+                onTap: () async {
                   Navigator.pop(context);
 
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => MessageProfessionalScreen(
-                        professional: widget.professional,
+                  final whatsappNumber = widget.professional.whatsApp
+                      .replaceAll(RegExp(r'[^0-9]'), '');
+
+                  if (whatsappNumber.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('WhatsApp number is not available.'),
                       ),
-                    ),
+                    );
+                    return;
+                  }
+
+                  final Uri whatsappUri = Uri.parse(
+                    'https://wa.me/$whatsappNumber',
                   );
+
+                  try {
+                    await launchUrl(
+                      whatsappUri,
+                      mode: LaunchMode.externalApplication,
+                    );
+                  } catch (e) {
+                    if (!context.mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Unable to open WhatsApp.'),
+                      ),
+                    );
+                  }
                 },
               ),
-ListTile(
+
+              ListTile(
 leading: const Icon(Icons.email),
 title: const Text('Send Email'),
 onTap: () async {
@@ -1868,7 +1818,6 @@ content: Text(
               ),
             ),
           ),
-          // Send Email button
 
           const SizedBox(height: 12),
 
@@ -2017,123 +1966,12 @@ content: Text(
           ),
 
           const SizedBox(height: 28),
-
-          const Text(
-            'Reviews',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          const Text(
-            'No written reviews yet.',
-            style: TextStyle(
-              fontSize: 16,
-            ),
-          ),
-
-          const SizedBox(height: 28),
         ],
       ),
     );
   }
 }
 
-
-class MessageProfessionalScreen extends StatefulWidget {
-  final Professional professional;
-
-  const MessageProfessionalScreen({
-    super.key,
-    required this.professional,
-  });
-
-  @override
-  State<MessageProfessionalScreen> createState() =>
-      _MessageProfessionalScreenState();
-}
-
-class _MessageProfessionalScreenState
-    extends State<MessageProfessionalScreen> {
-  final TextEditingController _messageController =
-  TextEditingController();
-
-  void _sendMessage() {
-    final message = _messageController.text.trim();
-
-    if (message.isEmpty) {
-      return;
-    }
-
-    _messageController.clear();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Message sent.'),
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Message ${widget.professional.name}'),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Center(
-              child: Text(
-                'Start a conversation with ${widget.professional.name}.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: const InputDecoration(
-                      hintText: 'Write a message...',
-                      border: OutlineInputBorder(),
-                    ),
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _sendMessage(),
-                  ),
-                ),
-
-                const SizedBox(width: 8),
-
-                IconButton(
-                  onPressed: _sendMessage,
-                  icon: const Icon(Icons.send),
-                  tooltip: 'Send',
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});
 

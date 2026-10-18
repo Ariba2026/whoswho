@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'business_profile_screen.dart';
 import 'professional_profile_screen.dart';
 import 'notifications_screen.dart';
+import 'settings_screen.dart';
 import 'advertising_screen.dart';
 
 class SocialMediaWall extends StatelessWidget {
@@ -38,7 +39,6 @@ class SocialMediaWall extends StatelessWidget {
       ),
     );
   }
-
 
   // TOP NAVIGATION BAR
   Widget _buildTopBar(BuildContext context) {
@@ -131,7 +131,7 @@ class SocialMediaWall extends StatelessWidget {
                   const SizedBox(width: 16),
 
                   _topNavItem(
-                    Icons.notifications_none,
+                    Icons.notifications_outlined,
                     'Notifications',
                     onTap: () {
                       Navigator.push(
@@ -147,27 +147,68 @@ class SocialMediaWall extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
 
-          InkWell(
-            onTap: () async {
-              await FirebaseAuth.instance.signOut();
+          PopupMenuButton<String>(
+            tooltip: 'Settings and Sign Out',
+            onSelected: (value) async {
+              if (value == 'settings') {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SettingsScreen(),
+                  ),
+                );
+              } else if (value == 'signout') {
+                await FirebaseAuth.instance.signOut();
 
-              if (!context.mounted) return;
+                if (!context.mounted) return;
 
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/',
-                    (route) => false,
-              );
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/',
+                      (route) => false,
+                );
+              }
             },
-            child: const Text(
-              'Sign Out',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
+            itemBuilder: (context) => [
+              const PopupMenuItem<String>(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings),
+                    SizedBox(width: 10),
+                    Text('Settings'),
+                  ],
+                ),
               ),
+              const PopupMenuItem<String>(
+                value: 'signout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout),
+                    SizedBox(width: 10),
+                    Text('Sign Out'),
+                  ],
+                ),
+              ),
+            ],
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Sign Out',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_drop_down,
+                  color: Colors.white,
+                ),
+              ],
             ),
           ),
         ],

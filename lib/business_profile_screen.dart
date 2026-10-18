@@ -543,8 +543,10 @@ class _BusinessProfileFormScreenState
               ],
             ),
 
+
             const SizedBox(height: 12),
 
+// WHATSAPP
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -552,9 +554,7 @@ class _BusinessProfileFormScreenState
                   width: 85,
                   child: TextFormField(
                     readOnly: true,
-                    controller: TextEditingController(
-                      text: _countryTelephoneCode,
-                    ),
+                    controller: _countryCodeController,
                     decoration: const InputDecoration(
                       labelText: 'Code',
                       border: OutlineInputBorder(),
@@ -577,6 +577,7 @@ class _BusinessProfileFormScreenState
                 ),
               ],
             ),
+
 
             const SizedBox(height: 16),
 
