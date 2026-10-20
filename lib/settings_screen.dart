@@ -512,7 +512,14 @@ class SettingsScreen extends StatelessWidget {
       // Delete the user's profile document.
       await userRef.delete();
 
-      // Finally, delete the Firebase Authentication account.
+// Delete the user's public profile document.
+      final publicProfileRef = FirebaseFirestore.instance
+          .collection('publicProfiles')
+          .doc(user.uid);
+
+      await publicProfileRef.delete();
+
+// Finally, delete the Firebase Authentication account.
       await user.delete();
 
       if (!context.mounted) return;

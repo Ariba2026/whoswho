@@ -384,6 +384,13 @@ class Professional {
   final String phone;
   final String whatsApp;
 
+  final List<String> positions;
+  final String yearsOfExperience;
+  final String aboutMe;
+  final String education;
+  final String certifications;
+  final String website;
+
   const Professional({
     required this.id,
     required this.email,
@@ -398,13 +405,22 @@ class Professional {
     required this.availability,
     required this.phone,
     this.whatsApp = '',
+    this.positions = const [],
+    this.yearsOfExperience = '',
+    this.aboutMe = '',
+    this.education = '',
+    this.certifications = '',
+    this.website = '',
   });
 }
+
 class Business {
   final String id;
   final String email;
   final String name;
   final String category;
+  final String industry;
+  final String businessType;
   final List<String> services;
   final String country;
   final String region;
@@ -412,12 +428,21 @@ class Business {
   final String address;
   final String availability;
   final String phone;
+  final String whatsApp;
+  final String languages;
+  final String departments;
+  final String aboutUs;
+  final String website;
+  final String socialMedia;
+  final String otherDetails;
 
   const Business({
     required this.id,
     required this.email,
     required this.name,
     required this.category,
+    this.industry = '',
+    this.businessType = '',
     required this.services,
     required this.country,
     required this.region,
@@ -425,135 +450,15 @@ class Business {
     this.address = '',
     required this.availability,
     required this.phone,
+    this.whatsApp = '',
+    this.languages = '',
+    this.departments = '',
+    this.aboutUs = '',
+    this.website = '',
+    this.socialMedia = '',
+    this.otherDetails = '',
   });
 }
-const List<Professional> sampleProfessionals = [
-  Professional(
-    id: 'john_otieno',
-    email: 'john@example.com',
-    name: 'John Otieno',
-    profession: 'Writer',
-    skills: [
-      'Writing',
-      'Editing',
-      'Content Creation',
-    ],
-    services: [
-      'Article Writing',
-      'Book Writing',
-      'Editing Services',
-      'Website Content',
-    ],
-    country: 'Kenya',
-    region: 'Siaya',
-    city: 'Siaya',
-    availability: 'Remote',
-    phone: '+254700000001',
-  ),
-
-  Professional(
-    id: 'mary_achieng',
-    email: 'mary@example.com',
-    name: 'Mary Achieng',
-    profession: 'Graphic Designer',
-    skills: [
-      'Graphic Design',
-      'Branding',
-      'Illustration',
-    ],
-    services: [
-      'Article Writing',
-      'Book Writing',
-      'Editing Services',
-      'Website Content',
-    ],
-    country: 'Kenya',
-    region: 'Nairobi',
-    city: 'Nairobi',
-    availability: 'On-site',
-    phone: '+254700000002',
-  ),
-
-  Professional(
-    id: 'david_okello',
-    email: 'david@example.com',
-    name: 'David Okello',
-    profession: 'Web Developer',
-    skills: [
-      'Flutter',
-      'Web Development',
-      'Mobile Apps',
-    ],
-    services: [
-      'Article Writing',
-      'Book Writing',
-      'Editing Services',
-      'Website Content',
-    ],
-    country: 'Uganda',
-    region: 'Kampala',
-    city: 'Kampala',
-    availability: 'Remote',
-    phone: '+256700000003',
-  ),
-];
-
-const List<Business> sampleBusinesses = [
-  Business(
-    id: 'ariba_productions',
-    email: 'info@aribaproductions.co.ke',
-    name: 'Ariba Productions',
-    category: 'Media & Film',
-    services: [
-      'Video Coverage',
-      'Video Editing',
-      'Film Production',
-      'Custom Music',
-      'AI Image Design',
-    ],
-    country: 'Kenya',
-    region: 'Migori',
-    city: 'Migori',
-    availability: 'On-site',
-    phone: '+254700000010',
-  ),
-
-  Business(
-    id: 'green_valley_hotel',
-    email: 'info@greenvalley.example',
-    name: 'Green Valley Hotel',
-    category: 'Hospitality',
-    services: [
-      'Accommodation',
-      'Restaurant',
-      'Conference Facilities',
-      'Events',
-    ],
-    country: 'Kenya',
-    region: 'Kisumu',
-    city: 'Kisumu',
-    availability: 'On-site',
-    phone: '+254700000011',
-  ),
-
-  Business(
-    id: 'tech_world_solutions',
-    email: 'info@techworld.example',
-    name: 'Tech World Solutions',
-    category: 'Technology',
-    services: [
-      'Web Development',
-      'Mobile App Development',
-      'IT Support',
-      'Software Services',
-    ],
-    country: 'Uganda',
-    region: 'Central',
-    city: 'Kampala',
-    availability: 'Remote',
-    phone: '+256700000012',
-  ),
-];
 
 class ProfessionalsDirectoryScreen extends StatefulWidget {
   const ProfessionalsDirectoryScreen({super.key});
@@ -644,6 +549,28 @@ class _ProfessionalsDirectoryScreenState
           availability: readText(profile['availability']),
           phone: readText(profile['telephone']),
           whatsApp: readText(profile['whatsApp']),
+          positions: (profile['positions'] as List?)
+              ?.map((item) {
+            if (item is Map) {
+              final title = (item['position'] ?? '').toString().trim();
+              final organization =
+              (item['organization'] ?? '').toString().trim();
+
+              if (title.isEmpty) return '';
+              return organization.isEmpty
+                  ? title
+                  : '$title\n$organization';
+            }
+            return item.toString().trim();
+          })
+              .where((item) => item.isNotEmpty)
+              .toList() ??
+              [],
+          yearsOfExperience: readText(profile['yearsOfExperience']),
+          aboutMe: readText(profile['aboutMe']),
+          education: readText(profile['education']),
+          certifications: readText(profile['certifications']),
+          website: readText(profile['website']),
         );
       }).toList();
 
@@ -1065,6 +992,13 @@ class _BusinessesDirectoryScreenState
           address: profile['physicalAddress']?.toString() ?? '',
           availability: profile['availability']?.toString() ?? '',
           phone: profile['telephone']?.toString() ?? '',
+          industry: profile['industry']?.toString() ?? '',
+          businessType: profile['businessType']?.toString() ?? '',
+          whatsApp: profile['whatsApp']?.toString() ?? '',
+          languages: profile['languages']?.toString() ?? '',
+          departments: profile['departments']?.toString() ?? '',
+          aboutUs: profile['aboutUs']?.toString() ?? '',
+          website: profile['website']?.toString() ?? '',
         );
       })
           .where((business) {
@@ -1330,6 +1264,7 @@ class _BusinessProfileScreenState
     );
   }
 
+
   void _contactBusiness() {
     showModalBottomSheet(
       context: context,
@@ -1358,6 +1293,47 @@ class _BusinessProfileScreenState
                         content: Text(
                           'Unable to open the phone dialer.',
                         ),
+                      ),
+                    );
+                  }
+                },
+              ),
+
+              ListTile(
+                leading: const Icon(Icons.chat, color: Colors.green),
+                title: const Text('WhatsApp'),
+                onTap: () async {
+                  Navigator.pop(context);
+
+                  final whatsappNumber = widget.business.whatsApp
+                      .replaceAll(RegExp(r'[^0-9]'), '');
+
+                  if (whatsappNumber.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'WhatsApp number is not available.',
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+
+                  final Uri whatsappUri = Uri.parse(
+                    'https://wa.me/$whatsappNumber',
+                  );
+
+                  try {
+                    await launchUrl(
+                      whatsappUri,
+                      mode: LaunchMode.externalApplication,
+                    );
+                  } catch (e) {
+                    if (!context.mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Unable to open WhatsApp.'),
                       ),
                     );
                   }
@@ -1396,6 +1372,7 @@ class _BusinessProfileScreenState
       },
     );
   }
+
 
   void _reportBusiness() {
     showDialog(
@@ -1457,108 +1434,255 @@ class _BusinessProfileScreenState
           ),
         ],
       ),
-      body: SingleChildScrollView(
+        body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              business.name,
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+    child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+    Text(
+    business.name,
+    style: const TextStyle(
+    fontSize: 26,
+    fontWeight: FontWeight.bold,
+    ),
+    ),
 
-            const SizedBox(height: 6),
+    const SizedBox(height: 6),
 
-            Text(
-              business.category,
-              style: const TextStyle(
-                fontSize: 18,
-              ),
-            ),
+    Text(
+    business.category,
+    style: const TextStyle(
+    fontSize: 18,
+    ),
+    ),
 
-            const SizedBox(height: 16),
+    if (business.industry.isNotEmpty) ...[
+    const SizedBox(height: 6),
+    Text(
+    business.industry,
+    style: const TextStyle(
+    fontSize: 16,
+    ),
+    ),
+    ],
 
-            const Text(
-              'Location',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+    if (business.businessType.isNotEmpty) ...[
+    const SizedBox(height: 16),
+    const Text(
+    'Business Type',
+    style: TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    ),
+    ),
+    const SizedBox(height: 6),
+    Text(
+    business.businessType,
+    style: const TextStyle(fontSize: 16),
+    ),
+    ],
 
-            const SizedBox(height: 6),
+    const SizedBox(height: 20),
 
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.location_on_outlined),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    '${business.country} · '
-                        '${business.region} · '
-                        '${business.city}',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ),
-              ],
-            ),
+    const Text(
+    'Location',
+    style: TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    ),
+    ),
 
-            const SizedBox(height: 20),
+    const SizedBox(height: 6),
 
-            const Text(
-              'Services',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+    Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+    const Icon(Icons.location_on_outlined),
+    const SizedBox(width: 6),
+    Expanded(
+    child: Text(
+    '${business.country} · '
+    '${business.region} · '
+    '${business.city}',
+    style: const TextStyle(fontSize: 16),
+    ),
+    ),
+    ],
+    ),
 
-            const SizedBox(height: 8),
+    if (business.address.isNotEmpty) ...[
+    const SizedBox(height: 8),
+    Text(
+    business.address,
+    style: const TextStyle(fontSize: 16),
+    ),
+    ],
 
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: business.services.map((service) {
-                return Chip(
-                  label: Text(service),
-                );
-              }).toList(),
-            ),
+    const SizedBox(height: 20),
 
-            const SizedBox(height: 20),
+    const Text(
+    'Services',
+    style: TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    ),
+    ),
 
-            Row(
-              children: [
-                Icon(
-                  business.availability == 'Remote'
-                      ? Icons.public
-                      : Icons.location_on,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'Availability: ${business.availability}',
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ],
-            ),
+    const SizedBox(height: 8),
 
-            const SizedBox(height: 24),
+    Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    children: business.services.map((service) {
+    return Chip(
+    label: Text(service),
+    );
+    }).toList(),
+    ),
 
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _contactBusiness,
-                icon: const Icon(Icons.phone),
-                label: const Text('Contact Business'),
-              ),
-            ),
-          ],
+    if (business.availability.isNotEmpty) ...[
+    const SizedBox(height: 20),
+
+    const Text(
+    'Availability',
+    style: TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    ),
+    ),
+
+    const SizedBox(height: 8),
+
+    Row(
+    children: [
+    Icon(
+    business.availability == 'Remote'
+    ? Icons.public
+        : Icons.location_on,
+    ),
+    const SizedBox(width: 6),
+    Expanded(
+    child: Text(
+    business.availability,
+    style: const TextStyle(fontSize: 16),
+    ),
+    ),
+    ],
+    ),
+    ],
+
+    if (business.languages.isNotEmpty) ...[
+    const SizedBox(height: 20),
+
+    const Text(
+    'Languages',
+    style: TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    ),
+    ),
+
+    const SizedBox(height: 8),
+
+    Text(
+    business.languages,
+    style: const TextStyle(fontSize: 16),
+    ),
+    ],
+
+    if (business.departments.isNotEmpty) ...[
+    const SizedBox(height: 20),
+
+    const Text(
+    'Departments',
+    style: TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    ),
+    ),
+
+    const SizedBox(height: 8),
+
+    Text(
+    business.departments,
+    style: const TextStyle(fontSize: 16),
+    ),
+    ],
+
+    if (business.aboutUs.isNotEmpty) ...[
+    const SizedBox(height: 20),
+
+    const Text(
+    'About Us',
+    style: TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    ),
+    ),
+
+    const SizedBox(height: 8),
+
+    Text(
+    business.aboutUs,
+    style: const TextStyle(fontSize: 16),
+    ),
+    ],
+
+    if (business.website.isNotEmpty) ...[
+    const SizedBox(height: 20),
+
+    const Text(
+    'Website',
+    style: TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    ),
+    ),
+
+    const SizedBox(height: 8),
+
+    InkWell(
+    onTap: () async {
+    final website = business.website.trim();
+
+    final uri = Uri.tryParse(
+    website.startsWith('http://') ||
+    website.startsWith('https://')
+    ? website
+        : 'https://$website',
+    );
+
+    if (uri != null && uri.hasAuthority) {
+    await launchUrl(
+    uri,
+    mode: LaunchMode.externalApplication,
+    );
+    }
+    },
+    child: Text(
+    business.website,
+    style: const TextStyle(
+    fontSize: 16,
+    color: Colors.blue,
+    decoration: TextDecoration.underline,
+    ),
+    ),
+    ),
+    ],
+
+    const SizedBox(height: 24),
+
+      SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: _contactBusiness,
+          icon: const Icon(Icons.phone),
+          label: const Text('Contact Business'),
         ),
       ),
+    ],
+    ),
+        ),
     );
   }
 }
@@ -1947,25 +2071,129 @@ content: Text(
             const SizedBox(height: 24),
           ],
 
-          const Text(
-            'About',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+
+          if (professional.positions.isNotEmpty) ...[
+            const Text(
+              'Positions Held',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-
-          const SizedBox(height: 8),
-
-          Text(
-            '${professional.name} is a ${professional.profession.toLowerCase()} '
-                'with skills in ${professional.skills.join(', ')}.',
-            style: const TextStyle(
-              fontSize: 16,
+            const SizedBox(height: 8),
+            ...professional.positions.map(
+                  (position) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  '• $position',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ),
             ),
-          ),
+            const SizedBox(height: 24),
+          ],
 
-          const SizedBox(height: 28),
+          if (professional.yearsOfExperience.isNotEmpty) ...[
+            const Text(
+              'Years of Experience',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              professional.yearsOfExperience,
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 24),
+          ],
+
+          if (professional.aboutMe.isNotEmpty) ...[
+            const Text(
+              'About',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              professional.aboutMe,
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 24),
+          ],
+
+          if (professional.education.isNotEmpty) ...[
+            const Text(
+              'Education & Qualifications',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              professional.education,
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 24),
+          ],
+
+          if (professional.certifications.isNotEmpty) ...[
+            const Text(
+              'Certifications',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              professional.certifications,
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 24),
+          ],
+
+          if (professional.website.isNotEmpty) ...[
+            const Text(
+              'Website',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () async {
+                final website = professional.website.trim();
+                final uri = Uri.tryParse(
+                  website.startsWith('http://') ||
+                      website.startsWith('https://')
+                      ? website
+                      : 'https://$website',
+                );
+
+                if (uri != null && uri.hasAuthority) {
+                  await launchUrl(
+                    uri,
+                    mode: LaunchMode.externalApplication,
+                  );
+                }
+              },
+              child: Text(
+                professional.website,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
         ],
       ),
     );
