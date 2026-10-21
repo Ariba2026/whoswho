@@ -42,6 +42,24 @@ class WelcomePage extends StatefulWidget {
 class _WelcomePageState extends State<WelcomePage> {
   final TextEditingController _searchController = TextEditingController();
 
+  void _submitSearch() {
+    final query = _searchController.text.trim();
+
+    if (query.isEmpty) {
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DirectorySearchResultsScreen(
+          searchQuery: query,
+        ),
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -97,28 +115,34 @@ class _WelcomePageState extends State<WelcomePage> {
               const SizedBox(height: 38),
 
               // Search box
-              TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search people or services',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: IconButton(
-                    icon: const Icon(
-                      Icons.clear,
-                      size: 24,
-                    ),
-                    onPressed: () {
-                      _searchController.clear();
-                    },
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
+
+          TextField(
+            controller: _searchController,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => _submitSearch(),
+            decoration: InputDecoration(
+              hintText: 'Search people or services',
+              prefixIcon: IconButton(
+                icon: const Icon(Icons.search),
+                onPressed: _submitSearch,
               ),
+              suffixIcon: IconButton(
+                icon: const Icon(
+                  Icons.clear,
+                  size: 24,
+                ),
+                onPressed: () {
+                  _searchController.clear();
+                },
+              ),
+              filled: true,
+              fillColor: Colors.grey.shade100,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
 
               const SizedBox(height: 22),
 
@@ -240,6 +264,265 @@ class _WelcomePageState extends State<WelcomePage> {
 }
 
 
+class DirectorySearchResultsScreen extends StatefulWidget {
+  final String searchQuery;
+
+  const DirectorySearchResultsScreen({
+    super.key,
+    required this.searchQuery,
+  });
+
+  @override
+  State<DirectorySearchResultsScreen> createState() =>
+      _DirectorySearchResultsScreenState();
+}
+
+class _DirectorySearchResultsScreenState
+    extends State<DirectorySearchResultsScreen> {
+  bool _isLoading = true;
+  String? _errorMessage;
+  List<Professional> _professionals = [];
+  List<Business> _businesses = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSearchResults();
+  }
+
+  Future<void> _loadSearchResults() async {
+    try {
+      final results = await Future.wait([
+        FirebaseFirestore.instance
+            .collection('publicProfiles')
+            .where('accountType', isEqualTo: 'Professional')
+            .get(),
+        FirebaseFirestore.instance
+            .collection('publicProfiles')
+            .where('accountType', isEqualTo: 'Business')
+            .get(),
+      ]);
+
+      if (!mounted) return;
+
+
+      final query = widget.searchQuery.trim().toLowerCase();
+
+      String readText(dynamic value) => value?.toString() ?? '';
+
+      List<String> readList(dynamic value) {
+        if (value is List) {
+          return value
+              .map((item) => item.toString().trim())
+              .where((item) => item.isNotEmpty)
+              .toList();
+        }
+
+        if (value is String && value.trim().isNotEmpty) {
+          return value
+              .split(RegExp(r'[,;\n]'))
+              .map((item) => item.trim())
+              .where((item) => item.isNotEmpty)
+              .toList();
+        }
+
+        return [];
+      }
+
+      final professionals = results[0].docs.map<Professional>((doc) {
+        final data = doc.data();
+        final rawProfile = data['professionalProfile'];
+        final profile = rawProfile is Map
+            ? Map<String, dynamic>.from(rawProfile)
+            : <String, dynamic>{};
+
+        final professions = readList(profile['professions']);
+        final profession = readText(profile['profession']);
+
+        return Professional(
+          id: doc.id,
+          email: readText(profile['email']),
+          name: readText(profile['fullName']).isNotEmpty
+              ? readText(profile['fullName'])
+              : readText(data['fullName']),
+          profession: professions.isNotEmpty
+              ? professions.first
+              : (profession.isNotEmpty ? profession : 'Professional'),
+          skills: readList(profile['skills']),
+          services: readList(profile['services']),
+          country: readText(profile['country']),
+          region: readText(profile['region']),
+          city: readText(profile['city']),
+          address: readText(profile['physicalAddress']),
+          availability: readText(profile['availability']),
+          phone: readText(profile['telephone']),
+          whatsApp: readText(profile['whatsApp']),
+        );
+      }).where((person) {
+        return person.name.toLowerCase().contains(query) ||
+            person.profession.toLowerCase().contains(query) ||
+            person.skills.any((item) => item.toLowerCase().contains(query)) ||
+            person.services.any((item) => item.toLowerCase().contains(query));
+      }).toList();
+
+      final businesses = results[1].docs.map<Business>((doc) {
+        final data = doc.data();
+        final rawProfile = data['businessProfile'];
+        final profile = rawProfile is Map
+            ? Map<String, dynamic>.from(rawProfile)
+            : <String, dynamic>{};
+
+        return Business(
+          id: doc.id,
+          email: readText(profile['email']),
+          name: readText(profile['businessName']).isNotEmpty
+              ? readText(profile['businessName'])
+              : readText(data['fullName']),
+          category: readText(profile['businessCategory']).isNotEmpty
+              ? readText(profile['businessCategory'])
+              : readText(profile['category']),
+          industry: readText(profile['industry']),
+          businessType: readText(profile['businessType']),
+          services: readList(profile['services']),
+          country: readText(profile['country']),
+          region: readText(profile['region']),
+          city: readText(profile['city']),
+          address: readText(profile['physicalAddress']),
+          availability: readText(profile['availability']),
+          phone: readText(profile['telephone']),
+          whatsApp: readText(profile['whatsApp']),
+          languages: readText(profile['languages']),
+          departments: readText(profile['departments']),
+          aboutUs: readText(profile['aboutUs']),
+          website: readText(profile['website']),
+        );
+      }).where((business) {
+        return business.name.toLowerCase().contains(query) ||
+            business.category.toLowerCase().contains(query) ||
+            business.industry.toLowerCase().contains(query) ||
+            business.services.any((item) => item.toLowerCase().contains(query));
+      }).toList();
+
+      setState(() {
+        _professionals = professionals;
+        _businesses = businesses;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Unable to load search results. Please try again.';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Search: ${widget.searchQuery}'),
+      ),
+
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _errorMessage != null
+            ? Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        )
+            : ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            if (_professionals.isNotEmpty) ...[
+              const Text(
+                'Professionals',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ..._professionals.map(
+                    (professional) => Card(
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      child: Icon(Icons.person),
+                    ),
+                    title: Text(professional.name),
+                    subtitle: Text(professional.profession),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              ProfessionalProfileScreen(
+                                professional: professional,
+                              ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+            if (_businesses.isNotEmpty) ...[
+              const Text(
+                'Businesses',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ..._businesses.map(
+                    (business) => Card(
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      child: Icon(Icons.business),
+                    ),
+                    title: Text(business.name),
+                    subtitle: Text(business.category),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              BusinessProfileScreen(
+                                business: business,
+                              ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+            if (_professionals.isEmpty && _businesses.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(top: 40),
+                child: Center(
+                  child: Text(
+                    'No matching professionals or businesses found.',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+    );
+  }
+}
+
+
 class DirectoryScreen extends StatelessWidget {
   const DirectoryScreen({super.key});
 
@@ -269,21 +552,6 @@ class DirectoryScreen extends StatelessWidget {
             style: TextStyle(
               fontSize: 15,
               color: Colors.black54,
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          TextField(
-            decoration: InputDecoration(
-              hintText: 'Search the directory',
-              prefixIcon: const Icon(Icons.search),
-              filled: true,
-              fillColor: Colors.grey.shade100,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
-              ),
             ),
           ),
 
@@ -465,8 +733,12 @@ class Business {
 }
 
 class ProfessionalsDirectoryScreen extends StatefulWidget {
-  const ProfessionalsDirectoryScreen({super.key});
+  final String initialSearch;
 
+  const ProfessionalsDirectoryScreen({
+    super.key,
+    this.initialSearch = '',
+  });
   @override
   State<ProfessionalsDirectoryScreen> createState() =>
       _ProfessionalsDirectoryScreenState();
@@ -486,6 +758,9 @@ class _ProfessionalsDirectoryScreenState
   @override
   void initState() {
     super.initState();
+
+    searchController.text = widget.initialSearch;
+
     _loadProfessionals();
   }
 
@@ -611,6 +886,10 @@ class _ProfessionalsDirectoryScreenState
         searchResults = professionals;
         hasSearched = true;
       });
+
+      if (widget.initialSearch.trim().isNotEmpty) {
+        _searchProfessionals();
+      }
     } catch (e) {
       if (!mounted) return;
 
