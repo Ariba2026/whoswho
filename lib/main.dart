@@ -383,14 +383,14 @@ class Professional {
   final String availability;
   final String phone;
   final String whatsApp;
-
   final List<String> positions;
   final String yearsOfExperience;
   final String aboutMe;
   final String education;
   final String certifications;
   final String website;
-
+  final Map<String, String> socialMedia;
+  final List<Map<String, String>> additionalSocialMedia;
   const Professional({
     required this.id,
     required this.email,
@@ -411,6 +411,8 @@ class Professional {
     this.education = '',
     this.certifications = '',
     this.website = '',
+    this.socialMedia = const {},
+    this.additionalSocialMedia = const [],
   });
 }
 
@@ -433,7 +435,8 @@ class Business {
   final String departments;
   final String aboutUs;
   final String website;
-  final String socialMedia;
+  final Map<String, String> socialMedia;
+  final List<Map<String, String>> additionalSocialMedia;
   final String otherDetails;
 
   const Business({
@@ -455,7 +458,8 @@ class Business {
     this.departments = '',
     this.aboutUs = '',
     this.website = '',
-    this.socialMedia = '',
+    this.socialMedia = const {},
+    this.additionalSocialMedia = const [],
     this.otherDetails = '',
   });
 }
@@ -571,6 +575,32 @@ class _ProfessionalsDirectoryScreenState
           education: readText(profile['education']),
           certifications: readText(profile['certifications']),
           website: readText(profile['website']),
+
+          socialMedia:
+          (profile['socialMedia'] as Map?)
+              ?.map(
+                (key, value) => MapEntry(
+              key.toString(),
+              value.toString(),
+            ),
+          )
+              .cast<String, String>() ??
+              {},
+          additionalSocialMedia:
+          (profile['additionalSocialMedia'] as List?)
+              ?.whereType<Map>()
+              .map(
+                (item) => Map<String, String>.from(
+              item.map(
+                    (key, value) => MapEntry(
+                  key.toString(),
+                  value.toString(),
+                ),
+              ),
+            ),
+          )
+              .toList() ??
+              [],
         );
       }).toList();
 
@@ -999,6 +1029,19 @@ class _BusinessesDirectoryScreenState
           departments: profile['departments']?.toString() ?? '',
           aboutUs: profile['aboutUs']?.toString() ?? '',
           website: profile['website']?.toString() ?? '',
+          socialMedia: (profile['socialMedia'] as Map?)?.map<String, String>(
+                (key, value) => MapEntry(key.toString(), value.toString()),
+          ) ??
+              const {},
+          additionalSocialMedia:
+          (profile['additionalSocialMedia'] as List?)
+              ?.whereType<Map>()
+              .map((item) => Map<String, String>.from(
+            item.map((key, value) =>
+                MapEntry(key.toString(), value.toString())),
+          ))
+              .toList() ??
+              const [],
         );
       })
           .where((business) {
@@ -1670,7 +1713,88 @@ class _BusinessProfileScreenState
     ),
     ],
 
-    const SizedBox(height: 24),
+      if (business.socialMedia.values.any(
+            (link) => link.trim().isNotEmpty,
+      ) ||
+          business.additionalSocialMedia.any(
+                (item) =>
+            (item['platform'] ?? '').trim().isNotEmpty &&
+                (item['link'] ?? '').trim().isNotEmpty,
+          )) ...[
+        const SizedBox(height: 20),
+
+        const Text(
+          'Social Media',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        ...business.socialMedia.entries
+            .where((entry) => entry.value.trim().isNotEmpty)
+            .map(
+              (entry) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.key,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                SelectableText(
+                  entry.value.trim(),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.blue,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        ...business.additionalSocialMedia
+            .where(
+              (item) =>
+          (item['platform'] ?? '').trim().isNotEmpty &&
+              (item['link'] ?? '').trim().isNotEmpty,
+        )
+            .map(
+              (item) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item['platform']!.trim(),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                SelectableText(
+                  item['link']!.trim(),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.blue,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+
+      const SizedBox(height: 24),
 
       SizedBox(
         width: double.infinity,
@@ -2192,8 +2316,91 @@ content: Text(
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+
+            const SizedBox(height: 20),
           ],
+
+
+          if (professional.socialMedia.values.any(
+                (link) => link.trim().isNotEmpty,
+          ) ||
+              professional.additionalSocialMedia.any(
+                    (item) =>
+                (item['platform'] ?? '').trim().isNotEmpty &&
+                    (item['link'] ?? '').trim().isNotEmpty,
+              )) ...[
+            const Text(
+              'Social Media',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            ...professional.socialMedia.entries
+                .where((entry) => entry.value.trim().isNotEmpty)
+                .map(
+                  (entry) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.key,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    SelectableText(
+                      entry.value.trim(),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        color: Colors.blue,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            ...professional.additionalSocialMedia
+                .where(
+                  (item) =>
+              (item['platform'] ?? '').trim().isNotEmpty &&
+                  (item['link'] ?? '').trim().isNotEmpty,
+            )
+                .map(
+                  (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item['platform']!.trim(),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    SelectableText(
+                      item['link']!.trim(),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        color: Colors.blue,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
+
+          const SizedBox(height: 24),
         ],
       ),
     );

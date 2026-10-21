@@ -941,131 +941,126 @@ class _BusinessProfileFormScreenState
 
             const SizedBox(height: 28),
 
-            // SOCIAL MEDIA
-            OutlinedButton.icon(
-              onPressed: () {
-                setState(() {
-                  _showSocialMedia = !_showSocialMedia;
-                });
-              },
-              icon: Icon(
-                _showSocialMedia
-                    ? Icons.remove
-                    : Icons.add,
-              ),
-              label: Text(
-                _showSocialMedia
-                    ? 'Hide Social Media Links'
-                    : 'Add Social Media Links (Optional)',
-              ),
-            ),
+    // SOCIAL MEDIA
+    OutlinedButton.icon(
+    onPressed: () {
+      setState(() {
+        _showSocialMedia = !_showSocialMedia;
+      });
+    },
+    icon: Icon(
+    _showSocialMedia ? Icons.remove : Icons.add,
+    ),
+    label: Text(
+    _showSocialMedia
+    ? 'Hide Social Media Links'
+        : 'Add Social Media Links (Optional)',
+    ),
+    ),
 
-            if (_showSocialMedia) ...[
-              const SizedBox(height: 12),
+    if (_showSocialMedia) ...[
+    const SizedBox(height: 12),
 
-              ..._socialMedia.keys.map((platform) {
-                return Padding(
-                  padding:
-                  const EdgeInsets.only(bottom: 12),
-                  child: TextFormField(
-                    initialValue:
-                    _socialMedia[platform] ?? '',
-                    maxLength: 300,
-                    keyboardType: TextInputType.url,
-                    decoration: InputDecoration(
-                      labelText: '$platform (Optional)',
-                      hintText:
-                      'Enter your $platform business link',
-                      prefixIcon:
-                      const Icon(Icons.link),
-                      border:
-                      const OutlineInputBorder(),
-                    ),
-                    onChanged: (value) {
-                      _socialMedia[platform] = value;
-                    },
-                  ),
-                );
-              }),
+    // STANDARD SOCIAL MEDIA PLATFORMS
+    ..._socialMedia.keys.map((platform) {
+    return Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: TextFormField(
+    initialValue: _socialMedia[platform] ?? '',
+    maxLength: 300,
+    keyboardType: TextInputType.url,
+    decoration: InputDecoration(
+    labelText: platform,
+    hintText: 'Enter your $platform business link',
+    prefixIcon: const Icon(Icons.link),
+    border: const OutlineInputBorder(),
+    ),
+    onChanged: (value) {
+    _socialMedia[platform] = value;
+    },
+    ),
+    );
+    }),
 
-              const SizedBox(height: 4),
+    const SizedBox(height: 4),
 
-              ..._additionalSocialMedia
-                  .asMap()
-                  .entries
-                  .map((entry) {
-                final index = entry.key;
+    // ADDITIONAL SOCIAL MEDIA PLATFORMS
+    ..._additionalSocialMedia.asMap().entries.map((entry) {
+    final index = entry.key;
 
-                return Card(
-                  margin:
-                  const EdgeInsets.only(bottom: 12),
-                  child: Padding(
-                    padding:
-                    const EdgeInsets.all(12),
-                    child: Column(
-                      children: [
-                        TextField(
-                          maxLength: 50,
-                          decoration:
-                          const InputDecoration(
-                            labelText: 'Platform',
-                            hintText:
-                            'e.g. Threads, Pinterest, Telegram',
-                            prefixIcon:
-                            Icon(Icons.public),
-                            border:
-                            OutlineInputBorder(),
-                          ),
-                          onChanged: (value) {
-                            _additionalSocialMedia[
-                            index]['platform'] =
-                                value;
-                          },
-                        ),
+    return Card(
+    margin: const EdgeInsets.only(bottom: 12),
+    child: Padding(
+    padding: const EdgeInsets.all(12),
+    child: Column(
+    children: [
+      TextFormField(
+        key: ValueKey('platform_$index'),
+        initialValue:
+        _additionalSocialMedia[index]['platform'] ?? '',
+        maxLength: 50,
+        decoration: const InputDecoration(
+          labelText: 'Platform',
+          hintText: 'e.g. Threads, Pinterest, Telegram',
+          prefixIcon: Icon(Icons.public),
+          border: OutlineInputBorder(),
+        ),
+        onChanged: (value) {
+          _additionalSocialMedia[index]['platform'] = value;
+        },
+      ),
 
-                        const SizedBox(height: 12),
+    const SizedBox(height: 12),
 
-                        TextField(
-                          maxLength: 300,
-                          keyboardType:
-                          TextInputType.url,
-                          decoration:
-                          const InputDecoration(
-                            labelText:
-                            'Profile Link',
-                            hintText:
-                            'Enter your business profile link',
-                            prefixIcon:
-                            Icon(Icons.link),
-                            border:
-                            OutlineInputBorder(),
-                          ),
-                          onChanged: (value) {
-                            _additionalSocialMedia[
-                            index]['link'] =
-                                value;
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
+      TextFormField(
+        key: ValueKey('link_$index'),
+        initialValue:
+        _additionalSocialMedia[index]['link'] ?? '',
+        maxLength: 300,
+        keyboardType: TextInputType.url,
+        decoration: const InputDecoration(
+          labelText: 'Profile Link',
+          hintText: 'Enter your business profile link',
+          prefixIcon: Icon(Icons.link),
+          border: OutlineInputBorder(),
+        ),
+        onChanged: (value) {
+          _additionalSocialMedia[index]['link'] = value;
+        },
+      ),
+      const SizedBox(height: 8),
 
-              OutlinedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _additionalSocialMedia.add({
-                      'platform': '',
-                      'link': '',
-                    });
-                  });
-                },
-                icon: const Icon(Icons.add),
-                label:
-                const Text('Add Social Media'),
-              ),
-            ],
+      Align(
+        alignment: Alignment.centerRight,
+        child: TextButton.icon(
+          onPressed: () {
+            setState(() {
+              _additionalSocialMedia.removeAt(index);
+            });
+          },
+          icon: const Icon(Icons.delete_outline),
+          label: const Text('Remove'),
+        ),
+      ),
+    ],
+    ),
+    ),
+    );
+    }),
+
+    OutlinedButton.icon(
+    onPressed: () {
+    setState(() {
+    _additionalSocialMedia.add({
+    'platform': '',
+    'link': '',
+    });
+    });
+    },
+    icon: const Icon(Icons.add),
+    label: const Text('Add Social Media'),
+    ),
+    ],
 
             const SizedBox(height: 32),
 
