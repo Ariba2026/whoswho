@@ -37,7 +37,8 @@ class _BusinessProfileFormScreenState
   TextEditingController();
   final TextEditingController _languagesController =
   TextEditingController();
-
+  final TextEditingController _customBusinessTypeController =
+  TextEditingController();
   String? _businessCategory;
   String? _availability;
   String _countryTelephoneCode = '';
@@ -95,6 +96,8 @@ class _BusinessProfileFormScreenState
 
       if (profile is Map<String, dynamic>) {
         _businessCategory = profile['businessCategory'];
+        _customBusinessTypeController.text =
+            profile['customBusinessType'] ?? '';
         _businessNameController.text = profile['businessName'] ?? '';
         _industryController.text = profile['industry'] ?? '';
         _telephoneController.text = profile['telephone'] ?? '';
@@ -206,6 +209,7 @@ class _BusinessProfileFormScreenState
 
     final profileData = {
       'businessCategory': _businessCategory,
+      'customBusinessType': _customBusinessTypeController.text.trim(),
       'industry': _industryController.text.trim(),
       'businessName': _businessNameController.text.trim(),
       'country': _country,
@@ -335,6 +339,18 @@ class _BusinessProfileFormScreenState
                 });
               },
             ),
+            if (_businessCategory == 'Other') ...[
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _customBusinessTypeController,
+                maxLength: 100,
+                decoration: const InputDecoration(
+                  labelText: 'Specify business type e.g shop, supermarket',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.edit_outlined),
+                ),
+              ),
+            ],
 
             const SizedBox(height: 16),
 

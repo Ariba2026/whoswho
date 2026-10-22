@@ -328,6 +328,36 @@ class _DirectorySearchResultsScreenState
 
         return [];
       }
+      bool matchesSearch(List<String> searchableFields) {
+        final searchTerms = query
+            .split(RegExp(r'\s+in\s+|,'))
+            .map((term) => term.trim().toLowerCase())
+            .where((term) => term.isNotEmpty)
+            .toList();
+
+        String singularize(String term) {
+          if (term == 'companies') return 'company';
+          if (term.endsWith('ies') && term.length > 3) {
+            return '${term.substring(0, term.length - 3)}y';
+          }
+          if (term.endsWith('s') &&
+              !term.endsWith('ss') &&
+              term.length > 1) {
+            return term.substring(0, term.length - 1);
+          }
+          return term;
+        }
+
+        return searchTerms.every((term) {
+          final normalizedTerm = singularize(term);
+
+          return searchableFields.any((field) {
+            final normalizedField = field.toLowerCase();
+            return normalizedField.contains(term) ||
+                normalizedField.contains(normalizedTerm);
+          });
+        });
+      }
 
       final professionals = results[0].docs.map<Professional>((doc) {
         final data = doc.data();
@@ -359,10 +389,16 @@ class _DirectorySearchResultsScreenState
           whatsApp: readText(profile['whatsApp']),
         );
       }).where((person) {
-        return person.name.toLowerCase().contains(query) ||
-            person.profession.toLowerCase().contains(query) ||
-            person.skills.any((item) => item.toLowerCase().contains(query)) ||
-            person.services.any((item) => item.toLowerCase().contains(query));
+        return matchesSearch([
+          person.name,
+          person.profession,
+          ...person.skills,
+          ...person.services,
+          person.country,
+          person.region,
+          person.city,
+          person.address,
+        ]);
       }).toList();
 
       final businesses = results[1].docs.map<Business>((doc) {
@@ -382,7 +418,9 @@ class _DirectorySearchResultsScreenState
               ? readText(profile['businessCategory'])
               : readText(profile['category']),
           industry: readText(profile['industry']),
-          businessType: readText(profile['businessType']),
+          businessType: readText(profile['customBusinessType']).isNotEmpty
+              ? readText(profile['customBusinessType'])
+              : readText(profile['businessType']),
           services: readList(profile['services']),
           country: readText(profile['country']),
           region: readText(profile['region']),
@@ -397,10 +435,20 @@ class _DirectorySearchResultsScreenState
           website: readText(profile['website']),
         );
       }).where((business) {
-        return business.name.toLowerCase().contains(query) ||
-            business.category.toLowerCase().contains(query) ||
-            business.industry.toLowerCase().contains(query) ||
-            business.services.any((item) => item.toLowerCase().contains(query));
+        return matchesSearch([
+          business.name,
+          business.category,
+          business.industry,
+          business.businessType,
+          ...business.services,
+          business.country,
+          business.region,
+          business.city,
+          business.address,
+          business.departments,
+          business.aboutUs,
+          business.languages,
+        ]);
       }).toList();
 
       setState(() {
