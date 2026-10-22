@@ -7,9 +7,17 @@ import 'professional_profile_screen.dart';
 import 'notifications_screen.dart';
 import 'settings_screen.dart';
 import 'advertising_screen.dart';
+import 'directory_models.dart';
 
 class SocialMediaWall extends StatelessWidget {
-  const SocialMediaWall({super.key});
+  final void Function(Professional professional)? onProfessionalTap;
+  final void Function(Business business)? onBusinessTap;
+
+  const SocialMediaWall({
+    super.key,
+    this.onProfessionalTap,
+    this.onBusinessTap,
+  });
 
   static const Color navy = Color(0xFF17365D);
   static const Color pageBackground = Color(0xFFF3F5F8);
@@ -471,6 +479,168 @@ class SocialMediaWall extends StatelessWidget {
     );
   }
 
+  String _suggestionText(Map<String, dynamic> data, String key,
+      [String fallback = '']) {
+    final value = data[key];
+    if (value == null) return fallback;
+    return value.toString().trim().isEmpty ? fallback : value.toString().trim();
+  }
+
+  List<String> _suggestionList(dynamic value) {
+    if (value is List) {
+      return value
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+    }
+    if (value is String && value.trim().isNotEmpty) {
+      return value
+          .split(RegExp(r'[,;\n]'))
+          .map((item) => item.trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+    }
+    return [];
+  }
+
+  Widget _buildSuggestedPeople() {
+    return FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      future: FirebaseFirestore.instance
+          .collection('publicProfiles')
+          .where('accountType', isEqualTo: 'Professional')
+          .limit(5)
+          .get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return const Text('Unable to load suggested people.');
+        }
+
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return const Text('No professionals to suggest yet.');
+        }
+
+        return Column(
+          children: docs.map((doc) {
+            final data = doc.data();
+            final profile = Map<String, dynamic>.from(
+              data['professionalProfile'] as Map? ?? {},
+            );
+            final professions = _suggestionList(profile['professions']);
+            final professional = Professional(
+              id: doc.id,
+              email: _suggestionText(profile, 'email',
+                  _suggestionText(data, 'email')),
+              name: _suggestionText(profile, 'fullName',
+                  _suggestionText(data, 'fullName', 'Professional')),
+              profession: professions.isNotEmpty
+                  ? professions.first
+                  : _suggestionText(profile, 'profession'),
+              skills: _suggestionList(profile['skills']),
+              services: _suggestionList(profile['services']),
+              country: _suggestionText(profile, 'country'),
+              region: _suggestionText(profile, 'region'),
+              city: _suggestionText(profile, 'city'),
+              address: _suggestionText(profile, 'physicalAddress',
+                  _suggestionText(profile, 'address')),
+              availability: _suggestionText(profile, 'availability'),
+              phone: _suggestionText(profile, 'phone'),
+              whatsApp: _suggestionText(profile, 'whatsapp'),
+            );
+
+            return ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.person),
+              ),
+              title: Text(professional.name),
+              subtitle: Text(
+                professional.profession.isNotEmpty
+                    ? professional.profession
+                    : 'Professional',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => onProfessionalTap?.call(professional),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildSuggestedBusinesses() {
+    return FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      future: FirebaseFirestore.instance
+          .collection('publicProfiles')
+          .where('accountType', isEqualTo: 'Business')
+          .limit(5)
+          .get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return const Text('Unable to load suggested businesses.');
+        }
+
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return const Text('No businesses to suggest yet.');
+        }
+
+        return Column(
+          children: docs.map((doc) {
+            final data = doc.data();
+            final profile = Map<String, dynamic>.from(
+              data['businessProfile'] as Map? ?? {},
+            );
+            final business = Business(
+              id: doc.id,
+              email: _suggestionText(profile, 'email',
+                  _suggestionText(data, 'email')),
+              name: _suggestionText(profile, 'businessName',
+                  _suggestionText(data, 'fullName', 'Business')),
+              category: _suggestionText(profile, 'businessCategory',
+                  _suggestionText(profile, 'category')),
+              industry: _suggestionText(profile, 'industry'),
+              businessType: _suggestionText(profile, 'businessType'),
+              services: _suggestionList(profile['services']),
+              country: _suggestionText(profile, 'country'),
+              region: _suggestionText(profile, 'region'),
+              city: _suggestionText(profile, 'city'),
+              address: _suggestionText(profile, 'physicalAddress',
+                  _suggestionText(profile, 'address')),
+              availability: _suggestionText(profile, 'availability'),
+              phone: _suggestionText(profile, 'phone'),
+              whatsApp: _suggestionText(profile, 'whatsapp'),
+              languages: _suggestionText(profile, 'languages'),
+              departments: _suggestionText(profile, 'departments'),
+              aboutUs: _suggestionText(profile, 'aboutUs'),
+              website: _suggestionText(profile, 'website'),
+              otherDetails: _suggestionText(profile, 'otherDetails'),
+            );
+
+            return ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.business),
+              ),
+              title: Text(business.name),
+              subtitle: Text(
+                business.category.isNotEmpty
+                    ? business.category
+                    : 'Business',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => onBusinessTap?.call(business),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
   // MAIN SOCIAL AREA
   Widget _buildMainArea(BuildContext context) {
     return Padding(
@@ -618,38 +788,13 @@ class SocialMediaWall extends StatelessWidget {
 
           const SizedBox(height: 16),
           _panel(
-            title: 'Social Feed',
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Posts from people and businesses '
-                      'will appear here.',
-                ),
-                SizedBox(height: 12),
-                Divider(),
-                Text(
-                  'Your feed is ready for future posts.',
-                  style: TextStyle(
-                    color: Colors.black54,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          _panel(
             title: 'Suggested People',
-            child: const Text(
-              'Suggested professionals will appear here.',
-            ),
+            child: _buildSuggestedPeople(),
           ),
           const SizedBox(height: 16),
           _panel(
             title: 'Suggested Businesses',
-            child: const Text(
-              'Suggested businesses will appear here.',
-            ),
+            child: _buildSuggestedBusinesses(),
           ),
         ],
       ),

@@ -29,6 +29,8 @@ class _BusinessProfileFormScreenState
   TextEditingController();
   final TextEditingController _industryController =
   TextEditingController();
+  final TextEditingController _customIndustryController =
+  TextEditingController();
   final TextEditingController _aboutUsController =
   TextEditingController();
   final TextEditingController _servicesController =
@@ -99,7 +101,17 @@ class _BusinessProfileFormScreenState
         _customBusinessTypeController.text =
             profile['customBusinessType'] ?? '';
         _businessNameController.text = profile['businessName'] ?? '';
-        _industryController.text = profile['industry'] ?? '';
+
+        final savedIndustry = profile['industry']?.toString() ?? '';
+
+        if (savedIndustry.isNotEmpty &&
+            !departments.contains(savedIndustry)) {
+          _industryController.text = 'Other';
+          _customIndustryController.text = savedIndustry;
+        } else {
+          _industryController.text = savedIndustry;
+          _customIndustryController.clear();
+        }
         _telephoneController.text = profile['telephone'] ?? '';
         _whatsAppController.text = profile['whatsApp']?.toString() ?? '';
         _physicalAddressController.text =
@@ -191,7 +203,6 @@ class _BusinessProfileFormScreenState
 
     if (_businessCategory == null ||
         _businessCategory!.trim().isEmpty ||
-        _industryController.text.trim().isEmpty ||
         _businessNameController.text.trim().isEmpty ||
         _country.trim().isEmpty ||
         _servicesController.text.trim().isEmpty ||
@@ -210,7 +221,9 @@ class _BusinessProfileFormScreenState
     final profileData = {
       'businessCategory': _businessCategory,
       'customBusinessType': _customBusinessTypeController.text.trim(),
-      'industry': _industryController.text.trim(),
+      'industry': _industryController.text.trim() == 'Other'
+          ? _customIndustryController.text.trim()
+          : _industryController.text.trim(),
       'businessName': _businessNameController.text.trim(),
       'country': _country,
       'telephone': _telephoneController.text.trim(),
@@ -373,7 +386,13 @@ class _BusinessProfileFormScreenState
                 );
               },
               onSelected: (String selection) {
-                _industryController.text = selection;
+                setState(() {
+                  _industryController.text = selection;
+
+                  if (selection != 'Other') {
+                    _customIndustryController.clear();
+                  }
+                });
               },
               fieldViewBuilder: (
                   BuildContext context,
@@ -394,23 +413,7 @@ class _BusinessProfileFormScreenState
                     _industryController.text = value;
                   },
                   decoration: InputDecoration(
-                    label: RichText(
-                      text: const TextSpan(
-                        text: 'Industry ',
-                        style: TextStyle(
-                          color: Colors.black87,
-                          fontSize: 16,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: '*',
-                            style: TextStyle(
-                              color: Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    labelText: 'Industry (Optional)',
                     hintText: 'Type to search industry',
                     prefixIcon:
                     const Icon(Icons.account_tree_outlined),
@@ -418,11 +421,27 @@ class _BusinessProfileFormScreenState
                   ),
                 );
               },
+
             ),
+
+            if (_industryController.text.trim() == 'Other') ...[
+              TextFormField(
+                controller: _customIndustryController,
+                maxLength: 100,
+                decoration: const InputDecoration(
+                  labelText: 'Specify Your Industry',
+                  hintText: 'Enter your industry',
+                  prefixIcon: Icon(Icons.edit_outlined),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
 
             const SizedBox(height: 16),
 
-            // BUSINESS NAME
+// BUSINESS NAME
+
             TextFormField(
               controller: _businessNameController,
               maxLength: 150,
