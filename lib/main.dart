@@ -8,6 +8,7 @@ import 'business_profile_screen.dart';
 import 'social_media_wall.dart';
 import 'sign_in_screen.dart';
 import 'directory_models.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -41,7 +42,14 @@ class WelcomePage extends StatefulWidget {
 }
 
 class _WelcomePageState extends State<WelcomePage> {
-  final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController =
+      TextEditingController();
+
+  List<String> _searchSuggestions = [];
+  bool _isLoadingSuggestions = false;
+
+  List<Map<String, dynamic>> _cachedSearchProfiles = [];
+  bool _hasLoadedSearchProfiles = false;
 
   void _submitSearch() {
     final query = _searchController.text.trim();
@@ -58,6 +66,126 @@ class _WelcomePageState extends State<WelcomePage> {
         ),
       ),
     );
+  }
+
+
+  Future<void> _loadSearchSuggestions(String input) async {
+    final query = input.trim().toLowerCase();
+
+    if (query.isEmpty) {
+      setState(() {
+        _searchSuggestions = [];
+        _isLoadingSuggestions = false;
+      });
+      return;
+    }
+
+    if (!_hasLoadedSearchProfiles) {
+      setState(() {
+        _isLoadingSuggestions = true;
+      });
+
+      try {
+        final results = await Future.wait([
+          FirebaseFirestore.instance
+              .collection('publicProfiles')
+              .where('accountType', isEqualTo: 'Professional')
+              .get(),
+          FirebaseFirestore.instance
+              .collection('publicProfiles')
+              .where('accountType', isEqualTo: 'Business')
+              .get(),
+        ]);
+
+        _cachedSearchProfiles = [
+          for (final snapshot in results)
+            for (final doc in snapshot.docs) doc.data(),
+        ];
+
+        _hasLoadedSearchProfiles = true;
+      } catch (_) {
+        if (!mounted) return;
+
+        setState(() {
+          _searchSuggestions = [];
+          _isLoadingSuggestions = false;
+        });
+        return;
+      }
+    }
+
+    final Set<String> suggestions = {};
+
+    void addSuggestion(dynamic value) {
+      if (value == null) return;
+
+      if (value is List) {
+        for (final item in value) {
+          addSuggestion(item);
+        }
+        return;
+      }
+
+      if (value is Map) {
+        for (final item in value.values) {
+          addSuggestion(item);
+        }
+        return;
+      }
+
+      final text = value.toString().trim();
+      if (text.isEmpty) return;
+
+      for (final part in text.split(RegExp(r'[,;\n]'))) {
+        final item = part.trim();
+
+        if (item.isNotEmpty &&
+            item.toLowerCase().startsWith(query)) {
+          suggestions.add(item);
+        }
+      }
+    }
+
+    for (final data in _cachedSearchProfiles) {
+      addSuggestion(data['fullName']);
+
+      for (final key in [
+        'professionalProfile',
+        'businessProfile',
+      ]) {
+        final profile = data[key];
+
+        if (profile is Map) {
+          for (final field in [
+            'fullName',
+            'profession',
+            'professions',
+            'skills',
+            'services',
+            'country',
+            'region',
+            'city',
+            'physicalAddress',
+            'streetName',
+            'businessName',
+            'businessCategory',
+            'category',
+            'industry',
+            'businessType',
+            'customBusinessType',
+          ]) {
+            addSuggestion(profile[field]);
+          }
+        }
+      }
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _searchSuggestions = suggestions.toList()..sort();
+      _isLoadingSuggestions = false;
+    });
   }
 
 
@@ -117,35 +245,76 @@ class _WelcomePageState extends State<WelcomePage> {
 
               // Search box
 
-          TextField(
-            controller: _searchController,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _submitSearch(),
-            decoration: InputDecoration(
-              hintText: 'Search people or services',
-              prefixIcon: IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: _submitSearch,
-              ),
-              suffixIcon: IconButton(
-                icon: const Icon(
-                  Icons.clear,
-                  size: 24,
-                ),
-                onPressed: () {
-                  _searchController.clear();
+              TextField(
+                controller: _searchController,
+                textInputAction: TextInputAction.search,
+                onChanged: (value) {
+                  _loadSearchSuggestions(value);
                 },
-              ),
-              filled: true,
-              fillColor: Colors.grey.shade100,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
+                onSubmitted: (_) => _submitSearch(),
+                decoration: InputDecoration(
+                  hintText: 'Search people or services',
+                  prefixIcon: IconButton(
+                    icon: const Icon(Icons.search),
+                    onPressed: _submitSearch,
+                  ),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.clear, size: 24),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() {});
+                    },
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
 
+              ),
+              if (_isLoadingSuggestions)
+                const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (_searchSuggestions.isNotEmpty &&
+                  _searchController.text.trim().isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.only(top: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _searchSuggestions.length > 6
+                        ? 6
+                        : _searchSuggestions.length,
+                    separatorBuilder: (context, index) =>
+                    const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final suggestion = _searchSuggestions[index];
+
+                      return ListTile(
+                        dense: true,
+                        title: Text(suggestion),
+                        onTap: () {
+                          _searchController.text = suggestion;
+                          _searchSuggestions = [];
+                          _submitSearch();
+                        },
+                      );
+                    },
+                  ),
+                ),
               const SizedBox(height: 22),
+
 
               // Browse Directory
               SizedBox(
@@ -283,6 +452,7 @@ class _DirectorySearchResultsScreenState
   bool _isLoading = true;
   String? _errorMessage;
   List<Professional> _professionals = [];
+  Map<String, Map<String, dynamic>> _professionalExtraFields = {};
   List<Business> _businesses = [];
 
   @override
@@ -360,6 +530,15 @@ class _DirectorySearchResultsScreenState
         });
       }
 
+      _professionalExtraFields = {
+        for (final doc in results[0].docs)
+          doc.id: Map<String, dynamic>.from(
+            doc.data()['professionalProfile'] is Map
+                ? doc.data()['professionalProfile'] as Map
+                : <String, dynamic>{},
+          ),
+      };
+
       final professionals = results[0].docs.map<Professional>((doc) {
         final data = doc.data();
         final rawProfile = data['professionalProfile'];
@@ -379,6 +558,7 @@ class _DirectorySearchResultsScreenState
           profession: professions.isNotEmpty
               ? professions.first
               : (profession.isNotEmpty ? profession : 'Professional'),
+
           skills: readList(profile['skills']),
           services: readList(profile['services']),
           country: readText(profile['country']),
@@ -388,10 +568,55 @@ class _DirectorySearchResultsScreenState
           availability: readText(profile['availability']),
           phone: readText(profile['telephone']),
           whatsApp: readText(profile['whatsApp']),
+          positions: (profile['positions'] as List?)
+              ?.map((item) {
+            if (item is Map) {
+              final title = (item['position'] ?? '').toString().trim();
+              final organization =
+              (item['organization'] ?? '').toString().trim();
+              if (title.isEmpty) return '';
+              return organization.isEmpty
+                  ? title
+                  : '$title\n$organization';
+            }
+            return item.toString().trim();
+          })
+              .where((item) => item.isNotEmpty)
+              .toList() ??
+              [],
+          yearsOfExperience: readText(profile['yearsOfExperience']),
+          aboutMe: readText(profile['aboutMe']),
+          education: readText(profile['education']),
+          certifications: readText(profile['certifications']),
+          website: readText(profile['website']),
+          socialMedia: (profile['socialMedia'] as Map?)?.map<String, String>(
+                (key, value) => MapEntry(key.toString(), value.toString()),
+          ) ??
+              const {},
+          additionalSocialMedia:
+          (profile['additionalSocialMedia'] as List?)
+              ?.whereType<Map>()
+              .map((item) => Map<String, String>.from(
+            item.map((key, value) =>
+                MapEntry(key.toString(), value.toString())),
+          ))
+              .toList() ??
+              const [],
+
         );
       }).where((person) {
+        final profile = results[0].docs
+            .firstWhere((doc) => doc.id == person.id)
+            .data()['professionalProfile'];
+
+        final professionalProfile = profile is Map
+            ? Map<String, dynamic>.from(profile)
+            : <String, dynamic>{};
+
         return matchesSearch([
+          readText(professionalProfile['salutation']),
           person.name,
+          readText(professionalProfile['streetName']),
           person.profession,
           ...person.skills,
           ...person.services,
@@ -408,6 +633,7 @@ class _DirectorySearchResultsScreenState
         final profile = rawProfile is Map
             ? Map<String, dynamic>.from(rawProfile)
             : <String, dynamic>{};
+
 
         return Business(
           id: doc.id,
@@ -434,7 +660,32 @@ class _DirectorySearchResultsScreenState
           departments: readText(profile['departments']),
           aboutUs: readText(profile['aboutUs']),
           website: readText(profile['website']),
+          socialMedia: (profile['socialMedia'] as Map?)
+              ?.map<String, String>(
+                (key, value) => MapEntry(
+              key.toString(),
+              value.toString(),
+            ),
+          ) ??
+              const {},
+          additionalSocialMedia:
+          (profile['additionalSocialMedia'] as List?)
+              ?.whereType<Map>()
+              .map(
+                (item) => Map<String, String>.from(
+              item.map(
+                    (key, value) => MapEntry(
+                  key.toString(),
+                  value.toString(),
+                ),
+              ),
+            ),
+          )
+              .toList() ??
+              const [],
+          otherDetails: readText(profile['otherDetails']),
         );
+
       }).where((business) {
         return matchesSearch([
           business.name,
@@ -503,17 +754,46 @@ class _DirectorySearchResultsScreenState
                     leading: const CircleAvatar(
                       child: Icon(Icons.person),
                     ),
-                    title: Text(professional.name),
-                    subtitle: Text(professional.profession),
-                    trailing: const Icon(Icons.chevron_right),
+
+                    title: Text(
+                      [
+                        _professionalExtraFields[professional.id]?['salutation']
+                            ?.toString()
+                            .trim() ??
+                            '',
+                        professional.name,
+                      ].where((value) => value.isNotEmpty).join(' '),
+                    ),
+                    subtitle: Text(
+                      [
+                        professional.profession,
+                        _professionalExtraFields[professional.id]?['streetName']
+                            ?.toString()
+                            .trim() ??
+                            '',
+                      ].where((value) => value.isNotEmpty).join('\n'),
+                    ),
+
+                    trailing: TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProfessionalProfileScreen(
+                              professional: professional,
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text('View Profile'),
+                    ),
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              ProfessionalProfileScreen(
-                                professional: professional,
-                              ),
+                          builder: (context) => ProfessionalProfileScreen(
+                            professional: professional,
+                          ),
                         ),
                       );
                     },
@@ -532,29 +812,41 @@ class _DirectorySearchResultsScreenState
               ),
               const SizedBox(height: 8),
               ..._businesses.map(
-                    (business) => Card(
-                  child: ListTile(
-                    leading: const CircleAvatar(
-                      child: Icon(Icons.business),
-                    ),
-                    title: Text(business.name),
-                    subtitle: Text(business.category),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              BusinessProfileScreen(
-                                business: business,
-                              ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+    (business) => Card(
+    child: ListTile(
+    leading: const CircleAvatar(
+    child: Icon(Icons.business),
+    ),
+    title: Text(business.name),
+    subtitle: Text(business.category),
+    trailing: TextButton(
+    onPressed: () {
+    Navigator.push(
+    context,
+    MaterialPageRoute(
+    builder: (context) => BusinessProfileScreen(
+    business: business,
+    ),
+    ),
+    );
+    },
+    child: const Text('View Business'),
+    ),
+    onTap: () {
+    Navigator.push(
+    context,
+    MaterialPageRoute(
+    builder: (context) => BusinessProfileScreen(
+    business: business,
+    ),
+    ),
+    );
+    },
+    ),
+    ),
               ),
             ],
+
             if (_professionals.isEmpty && _businesses.isEmpty)
               const Padding(
                 padding: EdgeInsets.only(top: 40),
@@ -1525,8 +1817,42 @@ class BusinessProfileScreen extends StatefulWidget {
 class _BusinessProfileScreenState
     extends State<BusinessProfileScreen> {
   bool isFavourite = false;
+  @override
+  void initState() {
+    super.initState();
+    _loadFavourite();
+  }
 
-  void _toggleFavourite() {
+  Future<void> _loadFavourite() async {
+    final prefs = await SharedPreferences.getInstance();
+    final favourites =
+        prefs.getStringList('favourite_business_ids') ?? [];
+
+    if (!mounted) return;
+
+    setState(() {
+      isFavourite = favourites.contains(widget.business.id);
+    });
+  }
+
+  Future<void> _toggleFavourite() async {
+    final prefs = await SharedPreferences.getInstance();
+    final favourites =
+        prefs.getStringList('favourite_business_ids') ?? [];
+
+    if (isFavourite) {
+      favourites.remove(widget.business.id);
+    } else if (!favourites.contains(widget.business.id)) {
+      favourites.add(widget.business.id);
+    }
+
+    await prefs.setStringList(
+      'favourite_business_ids',
+      favourites,
+    );
+
+    if (!mounted) return;
+
     setState(() {
       isFavourite = !isFavourite;
     });
@@ -1651,43 +1977,6 @@ class _BusinessProfileScreenState
     );
   }
 
-
-  void _reportBusiness() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Report Business'),
-          content: const Text(
-            'Are you sure you want to report this business?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Business reported. Thank you.',
-                    ),
-                  ),
-                );
-              },
-              child: const Text('Report'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final business = widget.business;
@@ -1704,11 +1993,6 @@ class _BusinessProfileScreenState
                   : Icons.favorite_border,
             ),
             tooltip: 'Favourite',
-          ),
-          IconButton(
-            onPressed: _reportBusiness,
-            icon: const Icon(Icons.flag_outlined),
-            tooltip: 'Report',
           ),
         ],
       ),
@@ -1905,7 +2189,24 @@ class _BusinessProfileScreenState
     style: const TextStyle(fontSize: 16),
     ),
     ],
+      if (business.otherDetails.isNotEmpty) ...[
+        const SizedBox(height: 20),
 
+        const Text(
+          'Other Details',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        Text(
+          business.otherDetails,
+          style: const TextStyle(fontSize: 16),
+        ),
+      ],
     if (business.website.isNotEmpty) ...[
     const SizedBox(height: 20),
 
@@ -2062,8 +2363,44 @@ class ProfessionalProfileScreen extends StatefulWidget {
 class _ProfessionalProfileScreenState
     extends State<ProfessionalProfileScreen> {
   bool isFavourite = false;
+  @override
+  void initState() {
+    super.initState();
+    _loadFavourite();
+  }
 
-  void _toggleFavourite() {
+  Future<void> _loadFavourite() async {
+    final prefs = await SharedPreferences.getInstance();
+    final favourites =
+        prefs.getStringList('favourite_professional_ids') ?? [];
+
+    if (!mounted) return;
+
+    setState(() {
+      isFavourite =
+          favourites.contains(widget.professional.id);
+    });
+  }
+
+
+  Future<void> _toggleFavourite() async {
+    final prefs = await SharedPreferences.getInstance();
+    final favourites =
+        prefs.getStringList('favourite_professional_ids') ?? [];
+
+    if (isFavourite) {
+      favourites.remove(widget.professional.id);
+    } else if (!favourites.contains(widget.professional.id)) {
+      favourites.add(widget.professional.id);
+    }
+
+    await prefs.setStringList(
+      'favourite_professional_ids',
+      favourites,
+    );
+
+    if (!mounted) return;
+
     setState(() {
       isFavourite = !isFavourite;
     });
@@ -2078,6 +2415,8 @@ class _ProfessionalProfileScreenState
       ),
     );
   }
+
+
 
   void _contactProfessional() {
     showModalBottomSheet(
@@ -2185,39 +2524,25 @@ content: Text(
     );
   }
 
-  void _reportProfessional() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Report Professional'),
-          content: Text(
-            'Are you sure you want to report ${widget.professional.name}?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
+  Future<void> _openSocialMediaLink(String link) async {
+    final trimmedLink = link.trim();
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Report submitted. Thank you for helping keep WhosWho safe.',
-                    ),
-                  ),
-                );
-              },
-              child: const Text('Report'),
-            ),
-          ],
-        );
-      },
+    if (trimmedLink.isEmpty) return;
+
+    final url = Uri.tryParse(
+      trimmedLink.contains('://')
+          ? trimmedLink
+          : 'https://$trimmedLink',
+    );
+
+    if (url == null ||
+        (url.scheme != 'https' && url.scheme != 'http')) {
+      return;
+    }
+
+    await launchUrl(
+      url,
+      mode: LaunchMode.externalApplication,
     );
   }
 
@@ -2303,28 +2628,6 @@ content: Text(
           ),
 
           const SizedBox(height: 12),
-
-
-          // Report button
-          SizedBox(
-            height: 50,
-            child: OutlinedButton.icon(
-              onPressed: _reportProfessional,
-              icon: const Icon(Icons.flag_outlined),
-              label: const Text(
-                'Report Professional',
-                style: TextStyle(
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          const Divider(),
-
-          const SizedBox(height: 16),
 
           const Text(
             'Location',
@@ -2589,11 +2892,15 @@ content: Text(
                       ),
                     ),
                     const SizedBox(height: 4),
-                    SelectableText(
-                      entry.value.trim(),
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: Colors.blue,
+                    GestureDetector(
+                      onTap: () => _openSocialMediaLink(entry.value),
+                      child: Text(
+                        entry.value.trim(),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: Colors.blue,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
                   ],
@@ -2621,11 +2928,16 @@ content: Text(
                       ),
                     ),
                     const SizedBox(height: 4),
-                    SelectableText(
-                      item['link']!.trim(),
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: Colors.blue,
+
+                    GestureDetector(
+                      onTap: () => _openSocialMediaLink(item['link']!),
+                      child: Text(
+                        item['link']!.trim(),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: Colors.blue,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
                   ],

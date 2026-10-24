@@ -15,7 +15,11 @@ class ProfessionalProfileFormScreen extends StatefulWidget {
 
 class _ProfessionalProfileFormScreenState
     extends State<ProfessionalProfileFormScreen> {
+  final TextEditingController _salutationController =
+  TextEditingController();
   final TextEditingController _fullNameController =
+  TextEditingController();
+  final TextEditingController _streetNameController =
   TextEditingController();
   final TextEditingController _telephoneController =
   TextEditingController();
@@ -122,7 +126,9 @@ class _ProfessionalProfileFormScreenState
       final profile = data?['professionalProfile'];
 
       if (profile is Map<String, dynamic>) {
+        _salutationController.text = profile['salutation'] ?? '';
         _fullNameController.text = profile['fullName'] ?? '';
+        _streetNameController.text = profile['streetName'] ?? '';
         _telephoneController.text = profile['telephone'] ?? '';
         _whatsAppController.text = profile['whatsApp']?.toString() ?? '';
         _cityController.text = profile['city'] ?? '';
@@ -294,7 +300,9 @@ class _ProfessionalProfileFormScreenState
     }
 
     final profileData = {
+      'salutation': _salutationController.text.trim(),
       'fullName': _fullNameController.text.trim(),
+      'streetName': _streetNameController.text.trim(),
       'telephone': _telephoneController.text.trim(),
       'whatsApp': _whatsAppController.text.trim(),
       'city': _cityController.text.trim(),
@@ -396,6 +404,20 @@ class _ProfessionalProfileFormScreenState
             ),
             const SizedBox(height: 24),
 
+// Salutation: optional, maximum 50 characters.
+            TextField(
+              controller: _salutationController,
+              maxLength: 50,
+              decoration: const InputDecoration(
+                labelText: 'Salutation',
+                hintText: 'e.g. Engineer, Reverend, Mr, Miss',
+                prefixIcon: Icon(Icons.badge_outlined),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+// Full Name: maximum 100 characters.
             // Full Name: maximum 100 characters.
             TextField(
               controller: _fullNameController,
@@ -420,8 +442,20 @@ class _ProfessionalProfileFormScreenState
                 border: const OutlineInputBorder(),
               ),
             ),
-
             const SizedBox(height: 16),
+
+            // Street Name: optional, maximum 100 characters.
+            TextField(
+              controller: _streetNameController,
+              maxLength: 100,
+              decoration: const InputDecoration(
+                labelText: 'Street Name',
+                hintText: 'nick name e.g. Ojay, Coblo',
+                prefixIcon: Icon(Icons.location_on_outlined),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
 
             // Country autocomplete: unchanged.
             Autocomplete<String>(
