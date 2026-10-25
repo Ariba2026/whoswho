@@ -467,13 +467,12 @@ class _DirectorySearchResultsScreenState
         FirebaseFirestore.instance
             .collection('publicProfiles')
             .where('accountType', isEqualTo: 'Professional')
-            .get(),
+            .get(const GetOptions(source: Source.server)),
         FirebaseFirestore.instance
             .collection('publicProfiles')
             .where('accountType', isEqualTo: 'Business')
-            .get(),
+            .get(const GetOptions(source: Source.server)),
       ]);
-
       if (!mounted) return;
 
 

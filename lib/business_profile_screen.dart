@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'departments.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -27,6 +28,7 @@ class _BusinessProfileFormScreenState
   TextEditingController();
   final TextEditingController _emailController =
   TextEditingController();
+  bool _agreedToTerms = false;
   final TextEditingController _industryController =
   TextEditingController();
   final TextEditingController _customIndustryController =
@@ -190,6 +192,18 @@ class _BusinessProfileFormScreenState
   }
 
   Future<void> _saveProfile() async {
+
+    if (!_agreedToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please agree to the Terms & Conditions before saving your profile.',
+          ),
+        ),
+      );
+      return;
+    }
+
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
@@ -1096,6 +1110,34 @@ class _BusinessProfileFormScreenState
     label: const Text('Add Social Media'),
     ),
     ],
+
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () async {
+                  final uri = Uri.parse(
+                    'https://www.aribaproductions.co.ke/whoswho-terms-conditions/',
+                  );
+                  await launchUrl(
+                    uri,
+                    mode: LaunchMode.externalApplication,
+                  );
+                },
+                child: const Text('Read Terms & Conditions'),
+              ),
+            ),
+
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              value: _agreedToTerms,
+              onChanged: (value) {
+                setState(() {
+                  _agreedToTerms = value ?? false;
+                });
+              },
+              title: const Text('I agree to the Terms & Conditions'),
+            ),
 
             const SizedBox(height: 32),
 
