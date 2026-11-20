@@ -562,7 +562,15 @@ class SocialMediaWall extends StatelessWidget {
                     : 'Professional',
               ),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => onProfessionalTap?.call(professional),
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Professional selected'),
+                  ),
+                );
+
+                onProfessionalTap?.call(professional);
+              },
             );
           }).toList(),
         );

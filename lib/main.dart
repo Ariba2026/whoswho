@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'professional_profile_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11,7 +12,11 @@ import 'directory_models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const WhosWhoApp());
 }
 
@@ -90,7 +95,7 @@ class _WelcomePageState extends State<WelcomePage> {
           FirebaseFirestore.instance
               .collection('publicProfiles')
               .where('accountType', isEqualTo: 'Professional')
-              .get(),
+              .get(const GetOptions(source: Source.server)),
           FirebaseFirestore.instance
               .collection('publicProfiles')
               .where('accountType', isEqualTo: 'Business')
@@ -707,12 +712,15 @@ class _DirectorySearchResultsScreenState
         _businesses = businesses;
         _isLoading = false;
       });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = 'Unable to load search results. Please try again.';
-        _isLoading = false;
-      });
+} catch (e) {
+if (!mounted) return;
+setState(() {
+_professionals = [];
+_businesses = [];
+_professionalExtraFields = {};
+_errorMessage = 'Unable to load search results. Please try again.';
+_isLoading = false;
+});
     }
   }
 
@@ -1017,9 +1025,9 @@ class _ProfessionalsDirectoryScreenState
 
     try {
       final snapshot = await FirebaseFirestore.instance
-          .collection('publicProfiles')
-          .where('accountType', isEqualTo: 'Professional')
-          .get();
+        .collection('publicProfiles')
+        .where('accountType', isEqualTo: 'Professional')
+        .get(const GetOptions(source: Source.server));
 
       final professionals = snapshot.docs.map((doc) {
         final data = doc.data();
@@ -1135,13 +1143,16 @@ class _ProfessionalsDirectoryScreenState
       if (widget.initialSearch.trim().isNotEmpty) {
         _searchProfessionals();
       }
-    } catch (e) {
-      if (!mounted) return;
+  } catch (e) {
+  if (!mounted) return;
 
-      setState(() {
-        _loadError = 'Could not load professionals: $e';
-      });
-    } finally {
+  setState(() {
+  _allProfessionals = [];
+  searchResults = [];
+  hasSearched = true;
+  _loadError = 'Could not load professionals. Please check your internet connection.';
+  });
+  } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -1516,7 +1527,7 @@ class _BusinessesDirectoryScreenState
       final snapshot = await FirebaseFirestore.instance
           .collection('publicProfiles')
           .where('accountType', isEqualTo: 'Business')
-          .get();
+          .get(const GetOptions(source: Source.server));
 
       final results = snapshot.docs
           .map((doc) {
@@ -1597,6 +1608,7 @@ class _BusinessesDirectoryScreenState
       if (!mounted) return;
 
       setState(() {
+        searchResults = [];
         _isLoading = false;
         _loadError = 'Unable to load businesses. Please try again.';
       });

@@ -49,3 +49,4 @@ whoswho-upload-key.jks
 
 # Generated Android build files
 android/build/
+.firebase/
