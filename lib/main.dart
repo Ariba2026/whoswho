@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'professional_profile_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -10,6 +11,8 @@ import 'social_media_wall.dart';
 import 'sign_in_screen.dart';
 import 'directory_models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:in_app_update/in_app_update.dart';
+import 'dart:async';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -34,7 +37,9 @@ class WhosWhoApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const AuthGate(),
+      home: const AppUpdateGate(
+        child: AuthGate(),
+      ),
     );
   }
 }
@@ -503,6 +508,7 @@ class _DirectorySearchResultsScreenState
 
         return [];
       }
+
       bool matchesSearch(List<String> searchableFields) {
         final searchTerms = query
             .split(RegExp(r'\s+in\s+|,'))
@@ -510,17 +516,49 @@ class _DirectorySearchResultsScreenState
             .where((term) => term.isNotEmpty)
             .toList();
 
-        String singularize(String term) {
-          if (term == 'companies') return 'company';
-          if (term.endsWith('ies') && term.length > 3) {
-            return '${term.substring(0, term.length - 3)}y';
+        String singularize(String word) {
+          const irregulars = {
+            'people': 'person',
+            'men': 'man',
+            'women': 'woman',
+            'children': 'child',
+            'teeth': 'tooth',
+            'feet': 'foot',
+            'mice': 'mouse',
+            'geese': 'goose',
+          };
+
+          if (irregulars.containsKey(word)) {
+            return irregulars[word]!;
           }
-          if (term.endsWith('s') &&
-              !term.endsWith('ss') &&
-              term.length > 1) {
-            return term.substring(0, term.length - 1);
+
+          if (word == 'companies') return 'company';
+
+          if (word.endsWith('ies') && word.length > 3) {
+            return '${word.substring(0, word.length - 3)}y';
           }
-          return term;
+
+          if (word.endsWith('sses') && word.length > 4) {
+            return word.substring(0, word.length - 2);
+          }
+
+          if (word.endsWith('es') &&
+              word.length > 3 &&
+              (word.endsWith('ches') ||
+                  word.endsWith('shes') ||
+                  word.endsWith('xes') ||
+                  word.endsWith('zes') ||
+                  word.endsWith('sses'))) {
+            return word.substring(0, word.length - 2);
+          }
+
+          if (word.endsWith('s') &&
+              !word.endsWith('ss') &&
+              word.length > 1) {
+            return word.substring(0, word.length - 1);
+          }
+
+          return word;
         }
 
         return searchTerms.every((term) {
@@ -528,11 +566,19 @@ class _DirectorySearchResultsScreenState
 
           return searchableFields.any((field) {
             final normalizedField = field.toLowerCase();
+
+            final fieldWords = normalizedField.split(
+              RegExp(r'[^a-z0-9]+'),
+            );
+
             return normalizedField.contains(term) ||
-                normalizedField.contains(normalizedTerm);
+                normalizedField.contains(normalizedTerm) ||
+                fieldWords.any((word) =>
+                singularize(word) == normalizedTerm);
           });
         });
       }
+
 
       _professionalExtraFields = {
         for (final doc in results[0].docs)
@@ -3224,6 +3270,135 @@ confirmPassword.isEmpty) {
         ),
       ),
     );
+  }
+}
+
+class AppUpdateGate extends StatefulWidget {
+  final Widget child;
+
+  const AppUpdateGate({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  State<AppUpdateGate> createState() => _AppUpdateGateState();
+}
+
+class _AppUpdateGateState extends State<AppUpdateGate> {
+  StreamSubscription<InstallStatus>? _updateSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForUpdates();
+    });
+  }
+
+  Future<void> _checkForUpdates() async {
+    // Google Play in-app updates are supported on Android only.
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      return;
+    }
+
+    try {
+      final info = await InAppUpdate.checkForUpdate();
+
+      if (!mounted) return;
+
+      // Resume an immediate update already started.
+      if (info.updateAvailability ==
+          UpdateAvailability.developerTriggeredUpdateInProgress) {
+        if (info.immediateUpdateAllowed) {
+          await InAppUpdate.performImmediateUpdate();
+        } else if (info.installStatus == InstallStatus.downloaded) {
+          await InAppUpdate.completeFlexibleUpdate();
+        }
+        return;
+      }
+
+      if (info.updateAvailability != UpdateAvailability.updateAvailable) {
+        return;
+      }
+
+      // Priority 4 or 5 means a critical update.
+      if (info.updatePriority >= 4 && info.immediateUpdateAllowed) {
+        await InAppUpdate.performImmediateUpdate();
+        return;
+      }
+
+      // Ordinary updates are offered as optional background downloads.
+      if (info.flexibleUpdateAllowed) {
+        final shouldUpdate = await showDialog<bool>(
+          context: context,
+          barrierDismissible: true,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('WhosWho update available'),
+            content: const Text(
+              'A newer version of WhosWho is available. '
+                  'Would you like to download it now?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Later'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Update'),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldUpdate == true && mounted) {
+          _updateSubscription =
+              InAppUpdate.installUpdateListener.listen((status) async {
+                if (status == InstallStatus.downloaded && mounted) {
+                  await showDialog<void>(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (dialogContext) => AlertDialog(
+                      title: const Text('Update downloaded'),
+                      content: const Text(
+                        'WhosWho is ready to install the update.',
+                      ),
+                      actions: [
+                        ElevatedButton(
+                          onPressed: () async {
+                            Navigator.pop(dialogContext);
+                            await InAppUpdate.completeFlexibleUpdate();
+                          },
+                          child: const Text('Restart now'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              });
+
+          await InAppUpdate.startFlexibleUpdate();
+        }
+      } else if (info.immediateUpdateAllowed) {
+        // Use immediate flow if flexible updates are unavailable.
+        await InAppUpdate.performImmediateUpdate();
+      }
+    } catch (e) {
+      debugPrint('In-app update check failed: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _updateSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }
 
